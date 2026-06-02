@@ -1,86 +1,489 @@
 // ══════════════════════════════════════════════════════
-// INFORME.JS — Informe Final de selección
+// INFORME.JS — Informe Final con ranking, scores y PDF
 // ══════════════════════════════════════════════════════
-var infC='';
-function pgInforme(){
-  var convs=DB.convs();
-  var cands=DB.cands();
-  var resultados=DB.resultados();
-  var opts=convs.map(function(c){return'<option value="'+c.id+'" '+(infC===c.id?'selected':'')+'>'+c.titulo+'</option>';}).join('');
-  var body='';
-  if(infC){
-    var conv=convs.find(function(c){return c.id===infC;});
-    var candsPorConv=cands.filter(function(c){return c.convocatoriaId===infC;});
-    var vacantes=conv?conv.vacantes:1;
-    var scores=candsPorConv.map(function(c){
-      var res=resultados.filter(function(r){return r.candId===c.id;});
-      var big5=res.find(function(r){return r.tipo==='big5';});
-      var scl=res.find(function(r){return r.tipo==='scl'||r.tipo==='screening';});
-      var cargo=res.find(function(r){return r.tipo==='cargo';});
-      var entrevista=res.find(function(r){return r.tipo==='entrevista';});
-      var ptos=[];
-      // Big5: dims objeto {E,A,C,N,O} escala 1-5 → 0-100 (N invertido)
-      var big5Score=null;
-      if(big5&&big5.dims){
-        var dv=big5.dims;
-        var b5vals=[(dv.E-1)/4*100,(dv.A-1)/4*100,(dv.C-1)/4*100,(5-dv.N)/4*100,(dv.O-1)/4*100];
-        big5Score=Math.round(b5vals.reduce(function(s,v){return s+(v||0);},0)/b5vals.length);
-        ptos.push(big5Score);
-      }
-      // SCL: escala 0-4, mayor=peor → invertir. Si no hay dims calcular de resps
-      var sclScore=null;
-      if(scl){
-        var sd=scl.dims;
-        if(!sd&&scl.resps&&scl.resps.length){
-          var sg={};
-          scl.resps.forEach(function(r){if(!sg[r.dim])sg[r.dim]=[];var v=r.val||0;sg[r.dim].push(v>4?v-1:v);});
-          sd={};Object.keys(sg).forEach(function(d){sd[d]=Math.round(sg[d].reduce(function(s,v){return s+v;},0)/sg[d].length*10)/10;});
-        }
-        if(sd){
-          var sv=Object.keys(sd).map(function(k){return sd[k];});
-          if(sv.length){var sa=sv.reduce(function(s,v){return s+v;},0)/sv.length;sclScore=Math.max(0,Math.round(100-sa*25));ptos.push(sclScore);}
-        }
-      }
-      // Cargo: usar puntaje real o calcularlo de resps
-      var cargoScore=null;
-      if(cargo){
-        if(cargo.puntaje!=null){cargoScore=cargo.puntaje;}
-        else if(cargo.resps&&cargo.resps.length){var cr=cargo.resps.filter(function(r){return parseInt(r.resp)===r.correcta;}).length;cargoScore=Math.round(cr/cargo.resps.length*100);}
-        if(cargoScore!=null)ptos.push(cargoScore);
-      }
-      // Entrevista HR: recomendacion → puntaje
-      var entScore=null;var entRec=entrevista?(entrevista.recomendacion||'pendiente'):null;
-      if(entrevista){var rm={'recomendar':90,'reserva':65,'no recomendar':25,'pendiente':70};entScore=rm[entRec]!=null?rm[entRec]:70;ptos.push(entScore);}
-      var score=ptos.length?Math.round(ptos.reduce(function(a,b){return a+b;},0)/ptos.length):0;
-      var completo=!!(big5&&scl&&cargo&&entrevista);
-      return{id:c.id,nombre:c.apellidos+', '+c.nombres,score:score,ciudad:c.ciudad,completo:completo,
-        hasBig5:!!big5,big5Score:big5Score,hasScl:!!scl,sclScore:sclScore,
-        hasCargo:!!cargo,cargoScore:cargoScore,hasEnt:!!entrevista,entScore:entScore,entRec:entRec};
-    }).sort(function(a,b){return b.score-a.score;});
-    var ganadores=scores.slice(0,vacantes);var suplentes=scores.slice(vacantes,vacantes*2);var noCompletos=scores.filter(function(s){return!s.completo;});
-    function mkBdg(x,primary){
-      var c1=primary?'b-bl':'b-cy';
-      return (x.hasBig5?'<span class="bdg '+c1+'">Big5: '+x.big5Score+'%</span>':'<span class="bdg b-rd">Big5 ✗</span>')
-        +' '+(x.hasScl?'<span class="bdg '+c1+'">SCL: '+x.sclScore+'%</span>':'<span class="bdg b-rd">SCL ✗</span>')
-        +' '+(x.hasCargo?'<span class="bdg '+c1+'">Cargo: '+x.cargoScore+'%</span>':'<span class="bdg b-rd">Cargo ✗</span>')
-        +' '+(x.hasEnt?'<span class="bdg '+(x.entRec==='recomendar'?'b-gn':x.entRec==='reserva'?'b-yw':'b-rd')+'">Entrevista: '+x.entScore+'%</span>':'<span class="bdg b-rd">Entrevista ✗</span>');
-    }
-    var html='<div class="sg"><div class="sc gn"><div class="sl">Vacantes</div><div class="sv">'+vacantes+'</div></div>'
-      +'<div class="sc bl"><div class="sl">Total Candidatos</div><div class="sv">'+candsPorConv.length+'</div></div>'
-      +'<div class="sc '+(noCompletos.length?'rd':'gn')+'"><div class="sl">Integridad</div><div class="sv">'+(candsPorConv.length-noCompletos.length)+'/'+candsPorConv.length+'</div></div></div>';
-    html+='<h2 style="font-size:18px;font-weight:700;margin:20px 0 12px;color:var(--g)">🏆 GANADORES</h2>';
-    if(ganadores.length){ganadores.forEach(function(g,i){html+='<div class="card" style="border-left:4px solid var(--g);margin-bottom:12px"><div class="cb"><div class="flex jb ic mb2"><div><span class="bdg b-gn">Puesto '+(i+1)+'</span><h3 style="font-size:16px;margin-top:6px">'+g.nombre+'</h3><div class="tsm tgr">'+g.ciudad+'</div></div><div style="text-align:right"><div class="sv" style="color:var(--g)">'+g.score+'%</div><div class="tsm tgr">Puntaje Total</div></div></div><div class="flex g2" style="margin-top:12px;flex-wrap:wrap">'+mkBdg(g,true)+'</div></div></div>';});}
-    else{html+='<div class="al al-w">No hay candidatos con datos registrados.</div>';}
-    if(suplentes.length){html+='<h2 style="font-size:18px;font-weight:700;margin:20px 0 12px;color:var(--w)">📋 SUPLENTES</h2>';suplentes.forEach(function(s,i){html+='<div class="card" style="border-left:4px solid var(--w);margin-bottom:12px"><div class="cb"><div class="flex jb ic mb2"><div><span class="bdg b-yw">Suplente '+(i+1)+'</span><h3 style="font-size:16px;margin-top:6px">'+s.nombre+'</h3><div class="tsm tgr">'+s.ciudad+'</div></div><div style="text-align:right"><div class="sv" style="color:var(--w)">'+s.score+'%</div><div class="tsm tgr">Puntaje Total</div></div></div><div class="flex g2" style="margin-top:12px;flex-wrap:wrap">'+mkBdg(s,false)+'</div></div></div>';});}
-    if(noCompletos.length){html+='<h2 style="font-size:18px;font-weight:700;margin:20px 0 12px;color:var(--r)">⚠️ DATOS INCOMPLETOS</h2><div class="card"><div class="cb"><table style="width:100%;font-size:12px"><thead><tr><th>Candidato</th><th>Puntaje Parcial</th><th style="text-align:center">Pendiente</th></tr></thead><tbody>';noCompletos.forEach(function(nc){var falta=[];if(!nc.hasBig5)falta.push('Big5');if(!nc.hasScl)falta.push('SCL');if(!nc.hasCargo)falta.push('Cargo');if(!nc.hasEnt)falta.push('Entrevista');html+='<tr><td>'+nc.nombre+'</td><td>'+nc.score+'%</td><td style="text-align:center;color:var(--r)">'+falta.join(', ')+'</td></tr>';});html+='</tbody></table></div></div>';}
-    body=html+'<div style="margin-top:20px"><button class="btn bo" onclick="window.print()">🖨️ Imprimir Informe</button></div>';
+
+var infC = '';
+
+// ── CALCULAR SCORE DE UN CANDIDATO ─────────────────────
+function calcScore(candId) {
+  var resultados = DB.resultados();
+  var res = resultados.filter(function(r) { return r.candId === candId; });
+
+  var big5      = res.find(function(r) { return r.tipo === 'big5'; });
+  var scl       = res.find(function(r) { return r.tipo === 'scl' || r.tipo === 'screening'; });
+  var cargo     = res.find(function(r) { return r.tipo === 'cargo'; });
+  var entrevista= res.find(function(r) { return r.tipo === 'entrevista'; });
+
+  // ── Big5: dims {E,A,C,N,O} escala 1-5 → 0-100 (N invertido)
+  var big5Score = null;
+  var big5Dims  = null;
+  if (big5 && big5.dims) {
+    var dv = big5.dims;
+    var b5 = {
+      E: Math.round((dv.E - 1) / 4 * 100),
+      A: Math.round((dv.A - 1) / 4 * 100),
+      C: Math.round((dv.C - 1) / 4 * 100),
+      N: Math.round((5 - dv.N) / 4 * 100),
+      O: Math.round((dv.O - 1) / 4 * 100)
+    };
+    big5Dims  = b5;
+    big5Score = Math.round((b5.E + b5.A + b5.C + b5.N + b5.O) / 5);
   }
-  document.getElementById('ct').innerHTML='<div class="fg" style="max-width:380px"><label>Convocatoria</label><select onchange="infC=this.value;pgInforme()"><option value="">- Seleccionar -</option>'+opts+'</select></div>'+(body||(!infC?'<div class="es"><div class="es-ico">📄</div><h3>Selecciona una convocatoria</h3></div>':''));
+
+  // ── SCL: escala 0-4, mayor=peor → invertir a 0-100
+  var sclScore = null;
+  var sclFlags = [];
+  var SCL_UMBRAL_LOCAL = { SOM:1.2, ANS:1.0, DEP:1.2, HOS:1.2, PAR:1.0, PSI:0.6, OBS:1.2, SIN:1.2 };
+  var SCL_NOMBRES = { SOM:'Somatización', ANS:'Ansiedad', DEP:'Depresión', HOS:'Hostilidad',
+                      PAR:'Paranoia', PSI:'Psicoticismo', OBS:'Obsesión', SIN:'Sens.Interpersonal' };
+  if (scl) {
+    var sd = scl.dims;
+    if (!sd && scl.resps && scl.resps.length) {
+      var sg = {};
+      scl.resps.forEach(function(r) {
+        if (!sg[r.dim]) sg[r.dim] = [];
+        var v = r.val || 0;
+        sg[r.dim].push(v > 4 ? v - 1 : v);
+      });
+      sd = {};
+      Object.keys(sg).forEach(function(d) {
+        sd[d] = Math.round(sg[d].reduce(function(s, v) { return s + v; }, 0) / sg[d].length * 10) / 10;
+      });
+    }
+    if (sd) {
+      var sv = Object.keys(sd).map(function(k) { return sd[k]; });
+      if (sv.length) {
+        var sa = sv.reduce(function(s, v) { return s + v; }, 0) / sv.length;
+        sclScore = Math.max(0, Math.round(100 - sa * 25));
+      }
+      Object.keys(sd).forEach(function(d) {
+        if (sd[d] >= (SCL_UMBRAL_LOCAL[d] || 1.0)) sclFlags.push(SCL_NOMBRES[d] || d);
+      });
+    }
+  }
+
+  // ── Cargo: puntaje real o calculado
+  var cargoScore   = null;
+  var cargoCorr    = null;
+  var cargoTotal   = null;
+  if (cargo) {
+    if (cargo.puntaje != null) {
+      cargoScore = cargo.puntaje;
+    } else if (cargo.resps && cargo.resps.length) {
+      var cr = cargo.resps.filter(function(r) { return parseInt(r.resp) === r.correcta; }).length;
+      cargoScore = Math.round(cr / cargo.resps.length * 100);
+      cargoCorr  = cr;
+      cargoTotal = cargo.resps.length;
+    }
+    if (cargoScore != null && cargoCorr == null && cargo.resps) {
+      cargoCorr  = cargo.resps.filter(function(r) { return parseInt(r.resp) === r.correcta; }).length;
+      cargoTotal = cargo.resps.length;
+    }
+  }
+
+  // ── Entrevista HR
+  var entScore = null;
+  var entRec   = null;
+  if (entrevista) {
+    entRec = entrevista.recomendacion || 'pendiente';
+    var rm = { recomendar: 90, reserva: 65, 'no recomendar': 25, pendiente: 70 };
+    entScore = rm[entRec] != null ? rm[entRec] : 70;
+  }
+
+  // ── Puntaje total (promedio de tests disponibles)
+  var ptos = [];
+  if (big5Score  != null) ptos.push(big5Score);
+  if (sclScore   != null) ptos.push(sclScore);
+  if (cargoScore != null) ptos.push(cargoScore);
+  if (entScore   != null) ptos.push(entScore);
+  var score = ptos.length ? Math.round(ptos.reduce(function(a, b) { return a + b; }, 0) / ptos.length) : 0;
+
+  // Completo = tiene al menos los 3 tests digitales
+  var completo = !!(big5 && scl && cargo);
+
+  return {
+    hasBig5: !!big5,   big5Score: big5Score,   big5Dims: big5Dims,
+    hasScl:  !!scl,    sclScore:  sclScore,    sclFlags: sclFlags,
+    hasCargo:!!cargo,  cargoScore:cargoScore,  cargoCorr:cargoCorr, cargoTotal:cargoTotal,
+    hasEnt:  !!entrevista, entScore: entScore, entRec: entRec,
+    score: score, completo: completo, testsCount: ptos.length
+  };
 }
 
-function confirmarSel(id){
-  var all=DB.cands();var idx=-1;all.forEach(function(c,i){if(c.id===id)idx=i;});if(idx<0)return;
-  var just=document.getElementById('just_'+id);
-  all[idx].etapa='seleccionado';if(just)all[idx].justificacion=just.value;
-  DB.sCands(all);toast('Candidato confirmado','ok');pgInforme();
+// ── HELPERS VISUALES ────────────────────────────────────
+function barColor(s) { return s >= 75 ? '#059669' : s >= 50 ? '#d97706' : '#dc2626'; }
+function barHtml(s, label) {
+  if (s == null) return '<span style="color:#94a3b8;font-size:11px">—</span>';
+  var c = barColor(s);
+  return '<div style="margin-bottom:6px">'
+    + '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">'
+    + '<span style="color:#475569;font-weight:600">' + label + '</span>'
+    + '<span style="font-weight:800;color:' + c + '">' + s + '%</span></div>'
+    + '<div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden">'
+    + '<div style="width:' + s + '%;height:100%;background:' + c + ';border-radius:3px;transition:width .5s"></div>'
+    + '</div></div>';
+}
+
+// ── PÁGINA INFORME ──────────────────────────────────────
+function pgInforme() {
+  var convs  = DB.convs();
+  var cands  = DB.cands();
+  var opts   = convs.map(function(c) {
+    return '<option value="' + c.id + '" ' + (infC === c.id ? 'selected' : '') + '>' + c.titulo + '</option>';
+  }).join('');
+
+  var body = '';
+
+  if (infC) {
+    var conv         = convs.find(function(c) { return c.id === infC; });
+    var candsPorConv = cands.filter(function(c) { return c.convocatoriaId === infC; });
+    var vacantes     = conv ? conv.vacantes : 1;
+
+    // Calcular scores para todos
+    var scores = candsPorConv.map(function(c) {
+      var sc = calcScore(c.id);
+      sc.id     = c.id;
+      sc.nombre = c.apellidos + ', ' + c.nombres;
+      sc.ciudad = c.ciudad || '-';
+      sc.etapa  = c.etapa;
+      return sc;
+    }).sort(function(a, b) { return b.score - a.score; });
+
+    var conDatos    = scores.filter(function(s) { return s.testsCount > 0; });
+    var sinDatos    = scores.filter(function(s) { return s.testsCount === 0; });
+    var ganadores   = conDatos.slice(0, vacantes);
+    var suplentes   = conDatos.slice(vacantes, vacantes * 2);
+    var resto       = conDatos.slice(vacantes * 2);
+
+    // ── STATS ─────────────────────────────────────
+    var html = '<div class="sg">'
+      + '<div class="sc bl"><div class="sl">Vacantes</div><div class="sv">' + vacantes + '</div></div>'
+      + '<div class="sc"><div class="sl">Candidatos</div><div class="sv">' + candsPorConv.length + '</div></div>'
+      + '<div class="sc gn"><div class="sl">Con tests</div><div class="sv">' + conDatos.length + '</div></div>'
+      + '<div class="sc ' + (sinDatos.length ? 'rd' : 'gn') + '"><div class="sl">Sin datos</div><div class="sv">' + sinDatos.length + '</div></div>'
+      + '</div>';
+
+    // ── GANADORES ──────────────────────────────────
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:20px 0 12px">'
+      + '<h2 style="font-size:18px;font-weight:800;color:#059669">🏆 Recomendados para contratar</h2>'
+      + '<button class="btn bo" onclick="generarPDF()" style="gap:6px">🖨️ Generar PDF</button>'
+      + '</div>';
+
+    if (ganadores.length) {
+      ganadores.forEach(function(g, i) {
+        html += tarjetaCandidato(g, i + 1, 'ganador');
+      });
+    } else {
+      html += '<div class="al al-w">Ningún candidato ha completado los tests aún. Usa el botón "Abrir Evaluación Digital" en Selección.</div>';
+    }
+
+    // ── SUPLENTES ─────────────────────────────────
+    if (suplentes.length) {
+      html += '<h2 style="font-size:16px;font-weight:700;color:#d97706;margin:20px 0 10px">📋 Suplentes</h2>';
+      suplentes.forEach(function(s, i) {
+        html += tarjetaCandidato(s, i + 1, 'suplente');
+      });
+    }
+
+    // ── RESTO CON DATOS ───────────────────────────
+    if (resto.length) {
+      html += '<h2 style="font-size:15px;font-weight:700;color:#64748b;margin:20px 0 10px">Otros candidatos evaluados</h2>';
+      resto.forEach(function(r) {
+        html += tarjetaCandidato(r, null, 'otro');
+      });
+    }
+
+    // ── SIN DATOS ─────────────────────────────────
+    if (sinDatos.length) {
+      html += '<h2 style="font-size:15px;font-weight:700;color:#dc2626;margin:20px 0 10px">⚠️ Sin datos de tests</h2>'
+        + '<div class="card"><div class="cb"><table style="width:100%;font-size:13px">'
+        + '<thead><tr><th>Candidato</th><th>Ciudad</th><th>Etapa</th></tr></thead><tbody>';
+      sinDatos.forEach(function(c) {
+        html += '<tr><td><strong>' + c.nombre + '</strong></td><td>' + c.ciudad + '</td>'
+          + '<td><span class="bdg b-gr">' + (c.etapa || '-') + '</span></td></tr>';
+      });
+      html += '</tbody></table></div></div>';
+    }
+
+    body = html;
+  }
+
+  document.getElementById('ct').innerHTML =
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">'
+    + '<div class="fg" style="margin:0;flex:1;min-width:200px;max-width:400px">'
+    + '<label>Convocatoria</label>'
+    + '<select onchange="infC=this.value;pgInforme()">'
+    + '<option value="">— Seleccionar —</option>' + DB.convs().map(function(c) {
+        return '<option value="' + c.id + '" ' + (infC === c.id ? 'selected' : '') + '>' + c.titulo + '</option>';
+      }).join('')
+    + '</select></div></div>'
+    + (body || (!infC
+        ? '<div class="es"><div class="es-ico">📄</div><h3>Selecciona una convocatoria</h3><p>Los resultados de los tests aparecerán aquí.</p></div>'
+        : ''));
+}
+
+// ── TARJETA DE CANDIDATO ─────────────────────────────────
+function tarjetaCandidato(g, puesto, tipo) {
+  var borderColor = tipo === 'ganador' ? '#059669' : tipo === 'suplente' ? '#d97706' : '#94a3b8';
+  var scoreColor  = tipo === 'ganador' ? '#059669' : tipo === 'suplente' ? '#d97706' : '#64748b';
+
+  var badgeHtml = '';
+  if (tipo === 'ganador') badgeHtml = '<span class="bdg b-gn">✓ Puesto ' + puesto + '</span>';
+  else if (tipo === 'suplente') badgeHtml = '<span class="bdg b-yw">Suplente ' + puesto + '</span>';
+
+  var sclHtml = '';
+  if (g.hasScl) {
+    sclHtml = g.sclFlags.length
+      ? g.sclFlags.map(function(f) { return '<span class="bdg b-rd" style="margin:1px;font-size:10px">⚠ ' + f + '</span>'; }).join('')
+      : '<span class="bdg b-gn" style="font-size:10px">✓ Sin alertas</span>';
+  }
+
+  var big5DimsHtml = '';
+  if (g.big5Dims) {
+    var dimNames = { E: 'Extraversión', A: 'Amabilidad', C: 'Responsabilidad', N: 'Est.Emocional', O: 'Apertura' };
+    big5DimsHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;margin-top:8px">';
+    ['E', 'A', 'C', 'N', 'O'].forEach(function(d) {
+      var v = g.big5Dims[d];
+      big5DimsHtml += '<div>' + barHtml(v, dimNames[d]) + '</div>';
+    });
+    big5DimsHtml += '</div>';
+  }
+
+  var cargoDetail = '';
+  if (g.hasCargo && g.cargoCorr != null) {
+    cargoDetail = '<span style="font-size:11px;color:#64748b;margin-left:6px">(' + g.cargoCorr + '/' + g.cargoTotal + ' correctas)</span>';
+  }
+
+  var entBadge = '';
+  if (g.hasEnt) {
+    var entColors = { recomendar: 'b-gn', reserva: 'b-yw', 'no recomendar': 'b-rd', pendiente: 'b-gr' };
+    entBadge = '<span class="bdg ' + (entColors[g.entRec] || 'b-gr') + '">' + (g.entRec || 'pendiente') + '</span>';
+  }
+
+  return '<div class="card" style="border-left:4px solid ' + borderColor + ';margin-bottom:14px">'
+    + '<div class="cb">'
+
+    // Cabecera
+    + '<div class="flex jb ic mb3" style="flex-wrap:wrap;gap:8px">'
+    + '<div>' + badgeHtml
+    + '<h3 style="font-size:16px;font-weight:800;margin-top:6px">' + g.nombre + '</h3>'
+    + '<span class="tgr txs">' + g.ciudad + '</span></div>'
+    + '<div style="text-align:right">'
+    + '<div style="font-size:32px;font-weight:900;color:' + scoreColor + '">' + g.score + '%</div>'
+    + '<div class="txs tgr">Puntaje total</div>'
+    + '</div></div>'
+
+    // Barra total
+    + '<div style="margin-bottom:16px">' + barHtml(g.score, 'Promedio general') + '</div>'
+
+    // Scores por test
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">'
+
+    // Big5
+    + '<div style="background:#f8fafc;border-radius:8px;padding:12px">'
+    + '<div style="font-size:11px;font-weight:800;color:#4f46e5;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">🧠 Personalidad (Big Five)</div>'
+    + (g.hasBig5 ? barHtml(g.big5Score, 'Puntaje global') + big5DimsHtml : '<span class="tgr txs">Sin datos</span>')
+    + '</div>'
+
+    // SCL
+    + '<div style="background:#f8fafc;border-radius:8px;padding:12px">'
+    + '<div style="font-size:11px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">💭 Bienestar Psicológico</div>'
+    + (g.hasScl ? barHtml(g.sclScore, 'Puntaje SCL') + '<div style="margin-top:8px">' + sclHtml + '</div>'
+                : '<span class="tgr txs">Sin datos</span>')
+    + '</div>'
+
+    // Cargo
+    + '<div style="background:#f8fafc;border-radius:8px;padding:12px">'
+    + '<div style="font-size:11px;font-weight:800;color:#059669;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">📚 Conocimientos del Cargo</div>'
+    + (g.hasCargo ? barHtml(g.cargoScore, 'Respuestas correctas') + cargoDetail
+                  : '<span class="tgr txs">Sin datos</span>')
+    + '</div>'
+
+    // Entrevista HR
+    + '<div style="background:#f8fafc;border-radius:8px;padding:12px">'
+    + '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">🎤 Entrevista RRHH</div>'
+    + (g.hasEnt ? barHtml(g.entScore, 'Recomendación') + '<div style="margin-top:6px">' + entBadge + '</div>'
+                : '<span class="tgr txs">Pendiente de evaluador</span>')
+    + '</div>'
+
+    + '</div>' // grid tests
+    + '</div></div>'; // cb + card
+}
+
+// ── GENERAR PDF ──────────────────────────────────────────
+function generarPDF() {
+  var conv = DB.convs().find(function(c) { return c.id === infC; });
+  if (!conv) { toast('Selecciona una convocatoria', 'err'); return; }
+
+  var cfg          = getCfg();
+  var empresa      = cfg.empresa || '[EMPRESA]';
+  var cands        = DB.cands().filter(function(c) { return c.convocatoriaId === infC; });
+  var fecha        = new Date().toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  var scores = cands.map(function(c) {
+    var sc = calcScore(c.id);
+    sc.nombre = c.apellidos + ', ' + c.nombres;
+    sc.ciudad = c.ciudad || '-';
+    return sc;
+  }).filter(function(s) { return s.testsCount > 0; })
+    .sort(function(a, b) { return b.score - a.score; });
+
+  if (!scores.length) { toast('No hay candidatos con datos de tests', 'w'); return; }
+
+  var vacantes = conv.vacantes || 1;
+
+  // ── Fila de la tabla de ranking
+  function filaRanking(s, i) {
+    var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
+    var rec   = i < vacantes ? 'CONTRATAR' : i < vacantes * 2 ? 'SUPLENTE' : '-';
+    var recClr= i < vacantes ? '#059669'   : i < vacantes * 2 ? '#d97706'  : '#94a3b8';
+    var bg    = i === 0 ? '#f0fdf4' : '';
+    return '<tr style="background:' + bg + '">'
+      + '<td style="text-align:center;font-size:16px">' + medal + '</td>'
+      + '<td><strong>' + s.nombre + '</strong><br><span style="font-size:10px;color:#64748b">' + s.ciudad + '</span></td>'
+      + '<td style="text-align:center">' + barra(s.big5Score) + '</td>'
+      + '<td style="text-align:center">' + barra(s.sclScore) + '</td>'
+      + '<td style="text-align:center">' + barra(s.cargoScore) + '</td>'
+      + '<td style="text-align:center">' + barra(s.entScore) + '</td>'
+      + '<td style="text-align:center;font-size:18px;font-weight:900;color:' + barColor(s.score) + '">' + s.score + '%</td>'
+      + '<td style="text-align:center"><span style="background:' + recClr + ';color:#fff;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700">' + rec + '</span></td>'
+      + '</tr>';
+  }
+  function barra(v) {
+    if (v == null) return '<span style="color:#cbd5e1">—</span>';
+    return '<span style="font-weight:700;color:' + barColor(v) + '">' + v + '%</span>';
+  }
+
+  // ── Big5 detalle del ganador
+  var ganador = scores[0];
+  var b5Detail = '';
+  if (ganador.big5Dims) {
+    var dn = { E: 'Extraversión', A: 'Amabilidad', C: 'Responsabilidad', N: 'Est.Emocional', O: 'Apertura' };
+    b5Detail = Object.keys(dn).map(function(k) {
+      var v = ganador.big5Dims[k];
+      return '<div style="margin-bottom:6px">'
+        + '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">'
+        + '<span>' + dn[k] + '</span><strong>' + v + '%</strong></div>'
+        + '<div style="height:5px;background:#e2e8f0;border-radius:3px">'
+        + '<div style="width:' + v + '%;height:100%;background:' + barColor(v) + ';border-radius:3px"></div>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  var sclAlerts = ganador.sclFlags.length
+    ? ganador.sclFlags.map(function(f) { return '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:10px;font-size:10px;margin:2px">' + f + '</span>'; }).join('')
+    : '<span style="background:#d1fae5;color:#065f46;padding:2px 10px;border-radius:10px;font-size:10px">✓ Sin alertas</span>';
+
+  var rankRows = scores.map(filaRanking).join('');
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe de Selección</title>'
+    + '<style>'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:Arial,sans-serif;font-size:12px;color:#1e293b}'
+    + '.page{width:21cm;min-height:29.7cm;margin:0 auto;padding:1.5cm 2cm}'
+    + '.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #2563eb;padding-bottom:12px;margin-bottom:18px}'
+    + '.hdr-empresa{font-size:18px;font-weight:900;color:#2563eb}'
+    + '.hdr-sub{font-size:10px;color:#64748b;margin-top:3px}'
+    + '.hdr-right{text-align:right}'
+    + '.hdr-right .doc-title{font-size:14px;font-weight:700;color:#1e293b}'
+    + '.sec{font-size:12px;font-weight:700;color:#2563eb;border-bottom:1px solid #bfdbfe;padding-bottom:4px;margin:16px 0 10px;text-transform:uppercase;letter-spacing:.05em}'
+    + 'table{width:100%;border-collapse:collapse;font-size:11px}'
+    + 'th{background:#f1f5f9;padding:7px 10px;text-align:left;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #e2e8f0;color:#475569}'
+    + 'td{padding:8px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle}'
+    + 'tr:hover td{background:#f8fafc}'
+    + '.ganador-box{background:#f0fdf4;border:2px solid #059669;border-radius:10px;padding:16px;margin-bottom:16px}'
+    + '.ganador-name{font-size:20px;font-weight:900;color:#059669;margin-bottom:4px}'
+    + '.score-big{font-size:42px;font-weight:900;color:#059669}'
+    + '.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}'
+    + '.box{background:#f8fafc;border-radius:8px;padding:12px}'
+    + '.box-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}'
+    + '.firmas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:30px;margin-top:40px}'
+    + '.firma-box{text-align:center}'
+    + '.firma-line{border-bottom:1px solid #334155;height:50px;margin-bottom:8px}'
+    + '.firma-nombre{font-weight:700;font-size:11px}'
+    + '.firma-rol{font-size:10px;color:#64748b;margin-top:2px}'
+    + '.footer{margin-top:20px;font-size:9px;color:#94a3b8;text-align:center;border-top:1px solid #f1f5f9;padding-top:7px}'
+    + '@media print{body{padding:0}.page{margin:0;padding:1.2cm 1.8cm}}'
+    + '</style></head><body>'
+    + '<div class="page">'
+
+    // HEADER
+    + '<div class="hdr">'
+    + '<div><div class="hdr-empresa">' + empresa + '</div>'
+    + '<div class="hdr-sub">' + (cfg.ruc ? 'RUC: ' + cfg.ruc : '') + (cfg.ciudad ? ' | ' + cfg.ciudad : '') + '</div></div>'
+    + '<div class="hdr-right"><div class="doc-title">INFORME FINAL DE SELECCIÓN</div>'
+    + '<div style="font-size:10px;color:#64748b;margin-top:4px">' + fecha + '</div>'
+    + '<div style="background:#eff6ff;color:#1e40af;padding:3px 12px;border-radius:4px;font-weight:700;font-size:11px;margin-top:5px">'
+    + conv.titulo + '</div></div></div>'
+
+    // INFO CONVOCATORIA
+    + '<div class="sec">1. Datos de la convocatoria</div>'
+    + '<table><tr><td style="width:35%;background:#f8fafc;font-weight:700">Cargo / Vacante</td><td>' + conv.titulo + '</td></tr>'
+    + '<tr><td style="background:#f8fafc;font-weight:700">Vacantes disponibles</td><td>' + vacantes + '</td></tr>'
+    + '<tr><td style="background:#f8fafc;font-weight:700">Candidatos evaluados</td><td>' + scores.length + ' de ' + cands.length + '</td></tr>'
+    + '<tr><td style="background:#f8fafc;font-weight:700">Responsable RRHH</td><td>' + (cfg.dirRRHH || '______________________________') + '</td></tr>'
+    + '<tr><td style="background:#f8fafc;font-weight:700">Fecha del informe</td><td>' + fecha + '</td></tr>'
+    + '</table>'
+
+    // CANDIDATO RECOMENDADO
+    + '<div class="sec">2. Candidato recomendado para contratación</div>'
+    + '<div class="ganador-box">'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">'
+    + '<div><div style="font-size:10px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">✓ RECOMENDADO · PUESTO 1</div>'
+    + '<div class="ganador-name">' + ganador.nombre + '</div>'
+    + '<div style="font-size:11px;color:#475569">' + ganador.ciudad + '</div></div>'
+    + '<div style="text-align:right"><div class="score-big">' + ganador.score + '%</div>'
+    + '<div style="font-size:10px;color:#64748b">Puntaje total</div></div></div>'
+    + '<div class="grid2" style="margin-top:14px">'
+    + '<div class="box"><div class="box-title" style="color:#4f46e5">🧠 Personalidad (Big Five)</div>'
+    + (ganador.hasBig5 ? b5Detail : '<span style="color:#94a3b8">Sin datos</span>')
+    + '</div>'
+    + '<div>'
+    + '<div class="box" style="margin-bottom:10px"><div class="box-title" style="color:#d97706">💭 Bienestar Psicológico</div>'
+    + (ganador.hasScl
+        ? '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Puntaje SCL</span><strong style="color:' + barColor(ganador.sclScore) + '">' + ganador.sclScore + '%</strong></div>'
+          + '<div>Alertas: ' + sclAlerts + '</div>'
+        : '<span style="color:#94a3b8">Sin datos</span>')
+    + '</div>'
+    + '<div class="box"><div class="box-title" style="color:#059669">📚 Conocimientos del Cargo</div>'
+    + (ganador.hasCargo
+        ? '<div style="display:flex;justify-content:space-between"><span>Respuestas correctas</span><strong style="color:' + barColor(ganador.cargoScore) + '">' + ganador.cargoScore + '%</strong></div>'
+          + (ganador.cargoCorr != null ? '<div style="font-size:10px;color:#64748b;margin-top:4px">' + ganador.cargoCorr + ' de ' + ganador.cargoTotal + ' preguntas</div>' : '')
+        : '<span style="color:#94a3b8">Sin datos</span>')
+    + '</div></div></div></div>'
+
+    // RANKING COMPLETO
+    + '<div class="sec">3. Ranking completo de candidatos</div>'
+    + '<table><thead><tr><th>#</th><th>Candidato</th><th style="text-align:center">Big5</th><th style="text-align:center">SCL</th><th style="text-align:center">Cargo</th><th style="text-align:center">Entrev.</th><th style="text-align:center">Total</th><th style="text-align:center">Decisión</th></tr></thead>'
+    + '<tbody>' + rankRows + '</tbody></table>'
+
+    // FIRMAS
+    + '<div class="sec" style="margin-top:24px">4. Firmas y conformidad</div>'
+    + '<div class="firmas">'
+    + '<div class="firma-box"><div class="firma-line"></div><div class="firma-nombre">' + (cfg.dirRRHH || '______________________________') + '</div><div class="firma-rol">Director de RRHH</div></div>'
+    + '<div class="firma-box"><div class="firma-line"></div><div class="firma-nombre">' + (cfg.repLegal || '______________________________') + '</div><div class="firma-rol">Representante Legal</div></div>'
+    + '<div class="firma-box"><div class="firma-line"></div><div class="firma-nombre">______________________________</div><div class="firma-rol">Gerente / Aprobador</div></div>'
+    + '</div>'
+
+    + '<div class="footer">' + empresa + (cfg.ruc ? ' | RUC: ' + cfg.ruc : '') + ' | Generado: ' + fecha + ' | CONFIDENCIAL</div>'
+    + '</div>'
+    + '<script>window.onload=function(){window.print();}<\/script>'
+    + '</body></html>';
+
+  var win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+function confirmarSel(id) {
+  var all = DB.cands();
+  var idx = -1;
+  all.forEach(function(c, i) { if (c.id === id) idx = i; });
+  if (idx < 0) return;
+  var just = document.getElementById('just_' + id);
+  all[idx].etapa = 'seleccionado';
+  if (just) all[idx].justificacion = just.value;
+  DB.sCands(all);
+  toast('Candidato confirmado', 'ok');
+  pgInforme();
 }

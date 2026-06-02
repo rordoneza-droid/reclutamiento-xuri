@@ -3,203 +3,394 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#2563eb">
-<title>Evaluación de Candidato</title>
+<meta name="theme-color" content="#4f46e5">
+<title>Evaluación · RRHH Pro</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--p:#2563eb;--pd:#1e40af;--g:#059669;--r:#dc2626;--w:#d97706;
-  --g50:#f8fafc;--g100:#f1f5f9;--g200:#e2e8f0;--g300:#cbd5e1;--g400:#94a3b8;--g500:#64748b;--g700:#334155;--g800:#1e293b}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4ff;color:var(--g800);font-size:15px;min-height:100vh}
+:root{
+  --indigo:#4f46e5;--indigo-d:#3730a3;--indigo-l:#eef2ff;
+  --amber:#d97706;--amber-l:#fffbeb;
+  --green:#059669;--green-l:#ecfdf5;
+  --purple:#7c3aed;--purple-l:#f5f3ff;
+  --red:#dc2626;--rose-l:#fff1f2;
+  --g50:#f8fafc;--g100:#f1f5f9;--g200:#e2e8f0;--g300:#cbd5e1;
+  --g400:#94a3b8;--g500:#64748b;--g700:#334155;--g800:#1e293b;
+  --radius:14px;--shadow:0 4px 24px rgba(0,0,0,.08);
+}
 
-/* ── HEADER ─────────────────── */
-#header{position:fixed;top:0;left:0;right:0;background:var(--p);color:#fff;z-index:100;
-  display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:54px;
-  box-shadow:0 2px 8px rgba(0,0,0,.2)}
-#header-title{font-size:14px;font-weight:700;flex:1}
-#timer{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;
-  background:rgba(255,255,255,.15);padding:4px 12px;border-radius:20px}
+/* ─── BASE ─────────────────────────────────────────── */
+html,body{min-height:100%;background:var(--g50);color:var(--g800);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:16px}
+
+/* ─── TOPBAR ────────────────────────────────────────── */
+#topbar{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  background:var(--step-color,var(--indigo));
+  color:#fff;display:flex;align-items:center;
+  padding:0 16px;height:56px;gap:12px;
+  box-shadow:0 2px 12px rgba(0,0,0,.2);
+  transition:background .4s;
+}
+#topbar-icon{font-size:22px}
+#topbar-title{font-size:15px;font-weight:700;flex:1;line-height:1.2}
+#topbar-sub{font-size:11px;opacity:.8}
+#timer{
+  font-size:15px;font-weight:800;
+  background:rgba(0,0,0,.2);padding:4px 12px;
+  border-radius:20px;font-variant-numeric:tabular-nums;white-space:nowrap;
+}
 #timer.warn{background:#d97706}
-#timer.danger{background:#dc2626;animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+#timer.danger{background:#dc2626;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.6}}
 
-/* ── BARRA PROGRESO TOP ──────── */
-#prog-bar{position:fixed;top:54px;left:0;right:0;height:4px;background:rgba(255,255,255,.3);z-index:99}
-#prog-fill{height:100%;background:#fff;transition:width .3s ease}
+/* ─── BARRA PROGRESO TOTAL ──────────────────────────── */
+#global-bar{
+  position:fixed;top:56px;left:0;right:0;z-index:199;
+  height:4px;background:rgba(0,0,0,.15);
+}
+#global-fill{height:100%;background:#fff;transition:width .4s ease;opacity:.7}
 
-/* ── STEPPER ────────────────── */
-#stepper{position:fixed;top:58px;left:0;right:0;background:#fff;border-bottom:1px solid var(--g200);
-  z-index:98;padding:0 8px;display:flex;overflow-x:auto;gap:0}
-.step-item{display:flex;align-items:center;gap:6px;padding:10px 12px;cursor:pointer;
-  border-bottom:3px solid transparent;white-space:nowrap;flex-shrink:0;transition:.15s;
-  font-size:12px;color:var(--g400)}
-.step-item.done{color:var(--g)}
-.step-item.active{color:var(--p);border-bottom-color:var(--p);font-weight:700}
-.step-num{width:22px;height:22px;border-radius:50%;border:2px solid currentColor;
-  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
-.step-item.done .step-num{background:var(--g);border-color:var(--g);color:#fff}
-.step-item.active .step-num{background:var(--p);border-color:var(--p);color:#fff}
+/* ─── STEPPER (indicador de rama) ─────────────────────── */
+#stepper{
+  position:fixed;top:60px;left:0;right:0;z-index:198;
+  background:#fff;border-bottom:1px solid var(--g200);
+  padding:10px 16px;display:flex;align-items:center;justify-content:center;gap:0;
+  overflow-x:auto;scrollbar-width:none;
+}
+#stepper::-webkit-scrollbar{display:none}
+.stp{display:flex;align-items:center;gap:0}
+.stp-dot{
+  width:28px;height:28px;border-radius:50%;
+  border:2px solid var(--g300);background:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;color:var(--g400);
+  transition:.3s;flex-shrink:0;cursor:default;
+}
+.stp-dot.done{background:var(--green);border-color:var(--green);color:#fff}
+.stp-dot.active{background:var(--step-color,var(--indigo));border-color:var(--step-color,var(--indigo));color:#fff;
+  box-shadow:0 0 0 4px rgba(79,70,229,.2)}
+.stp-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--g400);white-space:nowrap;margin:0 4px;transition:.3s}
+.stp-label.active{color:var(--step-color,var(--indigo))}
+.stp-label.done{color:var(--green)}
+.stp-line{width:24px;height:2px;background:var(--g200);flex-shrink:0;transition:.3s}
+.stp-line.done{background:var(--green)}
+@media(max-width:480px){.stp-label{display:none}.stp-line{width:12px}}
 
-/* ── CONTENIDO ──────────────── */
-#wrap{padding:130px 16px 100px;max-width:680px;margin:0 auto}
+/* ─── WRAP PRINCIPAL ────────────────────────────────── */
+#wrap{padding:128px 0 90px;min-height:100vh}
+.inner{max-width:660px;margin:0 auto;padding:0 14px}
 
-/* ── PANTALLA INICIO ─────────── */
+/* ─── PANTALLA INICIO ───────────────────────────────── */
 #screen-inicio{display:block}
-.logo{font-size:48px;margin-bottom:12px}
-#screen-inicio h1{font-size:22px;font-weight:700;color:var(--pd);margin-bottom:6px}
-#screen-inicio p{color:var(--g500);font-size:14px;margin-bottom:20px;line-height:1.5}
-.sel-wrap{background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:14px}
-.sel-wrap label{display:block;font-size:12px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
-select{width:100%;padding:10px 14px;border:2px solid var(--g200);border-radius:8px;font-size:15px;color:var(--g800);background:#fff;outline:none}
-select:focus{border-color:var(--p)}
-.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:13px;color:#1e40af;line-height:1.6}
-.info-box strong{display:block;margin-bottom:4px}
-.btn-start{width:100%;padding:16px;background:var(--p);color:#fff;border:none;border-radius:10px;font-size:17px;font-weight:700;cursor:pointer;transition:.15s}
-.btn-start:hover{background:var(--pd)}
-.btn-start:disabled{background:var(--g300);cursor:not-allowed}
+.inicio-hero{
+  background:linear-gradient(135deg,var(--indigo) 0%,#6366f1 100%);
+  color:#fff;border-radius:var(--radius);padding:28px 24px 24px;
+  margin-bottom:20px;text-align:center;
+}
+.inicio-hero .ico{font-size:52px;margin-bottom:12px}
+.inicio-hero h1{font-size:22px;font-weight:800;margin-bottom:6px}
+.inicio-hero p{font-size:14px;opacity:.85;line-height:1.5}
 
-/* ── STEP HEADER ─────────────── */
-.step-header{background:#fff;border-radius:12px;padding:16px 20px;margin-bottom:16px;
-  box-shadow:0 1px 4px rgba(0,0,0,.06);border-left:4px solid var(--p)}
-.step-header h2{font-size:18px;font-weight:700;color:var(--g800);margin-bottom:4px}
-.step-header p{font-size:13px;color:var(--g500)}
-.step-header .step-meta{display:flex;gap:10px;margin-top:8px;font-size:12px}
-.step-tag{background:var(--g100);color:var(--g600);padding:3px 10px;border-radius:20px;font-weight:600}
+.field-card{background:#fff;border-radius:var(--radius);padding:18px;
+  box-shadow:var(--shadow);margin-bottom:12px}
+.field-card label{display:block;font-size:11px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.06em;color:var(--g500);margin-bottom:8px}
+select,textarea,input[type=text]{
+  width:100%;padding:11px 14px;border:2px solid var(--g200);border-radius:10px;
+  font-size:15px;color:var(--g800);background:#fff;outline:none;transition:.2s;
+  appearance:none;-webkit-appearance:none;
+}
+select:focus,textarea:focus{border-color:var(--indigo);box-shadow:0 0 0 3px rgba(79,70,229,.12)}
+select:disabled{background:var(--g50);color:var(--g400)}
 
-/* ── PREGUNTAS ───────────────── */
-.bloque{background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:12px}
-.preg-num{font-size:11px;color:var(--g400);margin-bottom:4px;font-weight:600}
-.preg-txt{font-size:14px;font-weight:500;color:var(--g800);margin-bottom:14px;line-height:1.5}
+.steps-preview{
+  background:#fff;border-radius:var(--radius);padding:16px 18px;
+  box-shadow:var(--shadow);margin-bottom:16px;
+}
+.steps-preview h3{font-size:12px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--g500);margin-bottom:12px}
+.step-row{display:flex;align-items:center;gap:12px;padding:8px 0;
+  border-bottom:1px solid var(--g100)}
+.step-row:last-child{border-bottom:none}
+.step-ico{width:36px;height:36px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.step-info strong{font-size:14px;font-weight:700;display:block}
+.step-info span{font-size:12px;color:var(--g500)}
 
-/* Escala */
+.btn-start{
+  width:100%;padding:17px;background:var(--indigo);color:#fff;
+  border:none;border-radius:12px;font-size:17px;font-weight:800;
+  cursor:pointer;transition:.2s;letter-spacing:.01em;
+  box-shadow:0 4px 16px rgba(79,70,229,.4);
+}
+.btn-start:hover{background:var(--indigo-d);transform:translateY(-1px)}
+.btn-start:disabled{background:var(--g300);box-shadow:none;cursor:not-allowed;transform:none}
+
+.reset-wrap{margin-top:14px;background:#fff;border-radius:var(--radius);
+  padding:14px 16px;box-shadow:var(--shadow)}
+.reset-wrap summary{font-size:12px;font-weight:600;color:var(--g500);cursor:pointer}
+.reset-wrap select{margin-top:10px;margin-bottom:10px}
+.btn-reset{width:100%;padding:10px;background:var(--red);color:#fff;
+  border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:14px}
+
+/* ─── CONTENIDO DE RAMA ─────────────────────────────── */
+#screen-test{display:none}
+
+/* Banner de la rama */
+.rama-header{
+  background:var(--step-color,var(--indigo));color:#fff;
+  border-radius:var(--radius);padding:20px 20px 16px;margin-bottom:16px;
+  position:relative;overflow:hidden;
+}
+.rama-header::before{
+  content:'';position:absolute;right:-20px;top:-20px;
+  width:100px;height:100px;border-radius:50%;
+  background:rgba(255,255,255,.1);
+}
+.rama-header .tag{
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,.2);border-radius:20px;
+  padding:3px 10px;font-size:11px;font-weight:700;margin-bottom:10px;
+}
+.rama-header h2{font-size:20px;font-weight:800;margin-bottom:4px}
+.rama-header p{font-size:13px;opacity:.85;line-height:1.5}
+.rama-header .rama-meta{
+  display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;
+}
+.rama-chip{
+  background:rgba(255,255,255,.2);border-radius:20px;
+  padding:4px 12px;font-size:12px;font-weight:600;
+}
+
+/* ─── TARJETA DE PREGUNTA ───────────────────────────── */
+.q-card{
+  background:#fff;border-radius:var(--radius);padding:18px 18px 20px;
+  box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:10px;
+  border-left:4px solid var(--step-color,var(--indigo));
+  transition:border-color .3s;
+}
+.q-card.sin-resp{
+  border-left-color:var(--red)!important;
+  box-shadow:0 2px 12px rgba(220,38,38,.2);
+  animation:shake .3s;
+}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+.q-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.q-num{
+  font-size:11px;font-weight:800;color:var(--g400);
+  background:var(--g100);padding:3px 9px;border-radius:20px;white-space:nowrap;
+}
+.q-dim{
+  font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;
+}
+.q-txt{font-size:15px;font-weight:500;line-height:1.55;color:var(--g800);margin-bottom:14px}
+
+/* ─── ESCALA DE PUNTOS ──────────────────────────────── */
 .escala-wrap{display:flex;flex-direction:column;gap:6px}
-.escala-pts{display:flex;align-items:center;justify-content:space-between;gap:4px}
-.pt{width:40px;height:40px;border-radius:50%;border:2px solid var(--g200);background:#fff;
-  font-size:14px;font-weight:700;color:var(--g400);cursor:pointer;transition:.15s;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.pt:hover{border-color:var(--p);color:var(--p);background:#eff6ff}
-.pt.sel{border-color:var(--p);background:var(--p);color:#fff;transform:scale(1.12);box-shadow:0 2px 8px rgba(37,99,235,.3)}
-.escala-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--g400);padding:0 2px}
+.escala-pts{display:flex;gap:6px;justify-content:space-between}
+.pt{
+  flex:1;aspect-ratio:1;max-width:52px;border-radius:50%;
+  border:2px solid var(--g200);background:#fff;
+  font-size:14px;font-weight:800;color:var(--g400);
+  cursor:pointer;transition:.15s;
+  display:flex;align-items:center;justify-content:center;
+}
+.pt:hover{border-color:var(--step-color,var(--indigo));color:var(--step-color,var(--indigo));background:var(--step-bg,var(--indigo-l))}
+.pt.sel{
+  border-color:var(--step-color,var(--indigo));
+  background:var(--step-color,var(--indigo));
+  color:#fff;transform:scale(1.1);
+  box-shadow:0 3px 10px rgba(79,70,229,.35);
+}
+.escala-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--g400);padding:0 4px}
 
-/* Opciones múltiple */
+/* ─── OPCIONES MÚLTIPLE ─────────────────────────────── */
 .opciones{display:flex;flex-direction:column;gap:8px}
-.opcion{display:flex;align-items:center;gap:10px;padding:10px 14px;border:2px solid var(--g200);border-radius:8px;cursor:pointer;transition:.15s;font-size:14px}
-.opcion:hover{border-color:var(--p);background:#eff6ff}
-.opcion.sel{border-color:var(--p);background:#eff6ff}
-.opcion-letra{width:24px;height:24px;border-radius:50%;background:var(--g100);color:var(--g500);
-  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
-.opcion.sel .opcion-letra{background:var(--p);color:#fff}
+.opcion{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:12px 14px;border:2px solid var(--g200);border-radius:10px;
+  cursor:pointer;transition:.15s;background:#fff;text-align:left;width:100%;
+}
+.opcion:hover{border-color:var(--step-color,var(--indigo));background:var(--step-bg,var(--indigo-l))}
+.opcion.sel{border-color:var(--step-color,var(--indigo));background:var(--step-bg,var(--indigo-l))}
+.op-letra{
+  width:28px;height:28px;border-radius:8px;flex-shrink:0;
+  background:var(--g100);color:var(--g500);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;transition:.15s;
+}
+.opcion.sel .op-letra{background:var(--step-color,var(--indigo));color:#fff}
+.op-txt{font-size:14px;font-weight:500;color:var(--g800);line-height:1.4;padding-top:3px}
 
-/* Texto libre */
-.resp-open{width:100%;padding:10px 12px;border:2px solid var(--g200);border-radius:8px;
-  font-size:14px;color:var(--g800);resize:vertical;min-height:80px;outline:none;font-family:inherit}
-.resp-open:focus{border-color:var(--p)}
+/* ─── CAMPO TEXTO ───────────────────────────────────── */
+.resp-open{
+  width:100%;padding:11px 13px;border:2px solid var(--g200);border-radius:10px;
+  font-size:14px;color:var(--g800);resize:vertical;min-height:80px;
+  outline:none;font-family:inherit;transition:.2s;
+}
+.resp-open:focus{border-color:var(--step-color,var(--indigo));box-shadow:0 0 0 3px rgba(79,70,229,.1)}
 
-/* Sin responder */
-.bloque.sin-resp{border:2px solid var(--r)!important;animation:shake .3s}
-@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+/* ─── SEPARADOR DE DIMENSIÓN ────────────────────────── */
+.dim-sep{
+  display:flex;align-items:center;gap:10px;margin:18px 0 10px;
+}
+.dim-sep-line{flex:1;height:1px;background:var(--g200)}
+.dim-sep-label{
+  font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
+  padding:4px 12px;border-radius:20px;white-space:nowrap;
+}
 
-/* ── FOOTER NAVEGACIÓN ───────── */
-#nav-footer{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--g200);
-  padding:10px 16px;z-index:100;box-shadow:0 -2px 8px rgba(0,0,0,.06)}
-.nav-inner{max-width:680px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.prog-text{font-size:12px;color:var(--g400);white-space:nowrap}
-.btn-nav{padding:11px 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;border:none;transition:.15s}
-.btn-prev{background:var(--g100);color:var(--g700)}
+/* ─── FOOTER NAVEGACIÓN ─────────────────────────────── */
+#nav-footer{
+  position:fixed;bottom:0;left:0;right:0;z-index:200;
+  background:#fff;border-top:1px solid var(--g200);
+  padding:10px 14px;
+  box-shadow:0 -4px 16px rgba(0,0,0,.07);
+  padding-bottom:max(10px,env(safe-area-inset-bottom));
+}
+.nav-inner{max-width:660px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.prog-wrap{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.prog-label{font-size:11px;color:var(--g500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prog-bar-mini{height:6px;background:var(--g100);border-radius:3px;overflow:hidden}
+.prog-bar-fill{height:100%;background:var(--step-color,var(--indigo));border-radius:3px;transition:width .3s}
+.btn-prev{
+  padding:11px 16px;background:var(--g100);color:var(--g700);border:none;
+  border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;
+  white-space:nowrap;transition:.15s;flex-shrink:0;
+}
 .btn-prev:hover{background:var(--g200)}
-.btn-next{background:var(--p);color:#fff;flex:1}
-.btn-next:hover{background:var(--pd)}
-.btn-submit{background:var(--g);color:#fff;flex:1}
-.btn-submit:hover{background:#047857}
+.btn-next{
+  padding:11px 22px;background:var(--step-color,var(--indigo));color:#fff;
+  border:none;border-radius:10px;font-size:14px;font-weight:800;
+  cursor:pointer;white-space:nowrap;transition:.15s;flex-shrink:0;
+  box-shadow:0 3px 10px rgba(79,70,229,.35);
+}
+.btn-next:hover{filter:brightness(1.1)}
 
-/* ── PANTALLA FIN ────────────── */
-#screen-fin{display:none;text-align:center;padding:60px 20px}
-#screen-fin .ico{font-size:72px;margin-bottom:20px}
-#screen-fin h2{font-size:24px;font-weight:700;color:var(--g);margin-bottom:10px}
-#screen-fin p{color:var(--g500);font-size:15px;line-height:1.6}
+/* ─── PANTALLA FIN ──────────────────────────────────── */
+#screen-fin{display:none;padding:60px 20px;text-align:center}
+.fin-ico{font-size:80px;margin-bottom:20px;animation:pop .5s ease}
+@keyframes pop{0%{transform:scale(0)}80%{transform:scale(1.15)}100%{transform:scale(1)}}
+.fin-title{font-size:26px;font-weight:800;color:var(--green);margin-bottom:10px}
+.fin-sub{font-size:15px;color:var(--g500);line-height:1.6}
 
-/* ── RESET CANDIDATO ─────────── */
-.reset-panel{background:#fff;border-radius:12px;padding:14px 16px;margin-top:16px;border:1px solid var(--g200)}
-.reset-panel summary{font-weight:600;color:#856404;cursor:pointer;font-size:13px}
-
-@media(max-width:400px){.pt{width:34px;height:34px;font-size:12px}}
-@media print{#header,#prog-bar,#stepper,#nav-footer{display:none}}
+/* ─── RESPONSIVE ────────────────────────────────────── */
+@media(max-width:480px){
+  .inicio-hero{padding:22px 18px}
+  .inicio-hero h1{font-size:20px}
+  .q-card{padding:15px 14px 17px}
+  .q-txt{font-size:14px}
+  .pt{font-size:13px}
+  .btn-next,.btn-prev{padding:11px 14px;font-size:13px}
+}
+@media print{#topbar,#global-bar,#stepper,#nav-footer{display:none}}
 </style>
 </head>
 <body>
 
-<div id="header">
-  <span id="header-title">📋 Evaluación</span>
+<!-- ── TOPBAR ── -->
+<div id="topbar">
+  <span id="topbar-icon">📋</span>
+  <div style="flex:1;min-width:0">
+    <div id="topbar-title">Evaluación de Candidato</div>
+    <div id="topbar-sub"></div>
+  </div>
   <span id="timer">60:00</span>
 </div>
-<div id="prog-bar"><div id="prog-fill" style="width:0%"></div></div>
+<div id="global-bar"><div id="global-fill" style="width:0%"></div></div>
 <div id="stepper"></div>
 
 <div id="wrap">
+<div class="inner">
 
-  <!-- PANTALLA INICIO -->
+  <!-- ── INICIO ── -->
   <div id="screen-inicio">
-    <div class="logo">📋</div>
-    <h1>Evaluación de Candidato</h1>
-    <p>Selecciona tu nombre y convocatoria antes de comenzar.</p>
+    <div class="inicio-hero">
+      <div class="ico">📝</div>
+      <h1>Evaluación de Candidato</h1>
+      <p>Completa cada sección con calma y sinceridad.<br>No hay respuestas buenas ni malas.</p>
+    </div>
 
-    <div class="sel-wrap">
+    <div class="field-card">
       <label>Convocatoria</label>
       <select id="sel-conv"><option value="">— Seleccionar convocatoria —</option></select>
     </div>
-    <div class="sel-wrap">
+    <div class="field-card">
       <label>Tu nombre</label>
       <select id="sel-cand" disabled><option value="">— Primero selecciona la convocatoria —</option></select>
     </div>
 
-    <div class="info-box">
-      <strong>📌 Instrucciones importantes</strong>
-      El test está dividido en <strong>4 secciones</strong>. Puedes navegar entre ellas con los botones Anterior / Siguiente.<br>
-      Tienes <strong>60 minutos</strong> en total — el tiempo corre desde que presionas "Comenzar".<br>
-      Responde con sinceridad, no hay respuestas buenas ni malas.<br>
-      Al enviar o al finalizar el tiempo, tus respuestas se guardan automáticamente.
+    <div class="steps-preview">
+      <h3>Secciones del test</h3>
+      <div class="step-row">
+        <div class="step-ico" style="background:#eef2ff">🧠</div>
+        <div class="step-info"><strong>Personalidad</strong><span>Test Big Five · 20 preguntas · Escala 1-5</span></div>
+      </div>
+      <div class="step-row">
+        <div class="step-ico" style="background:#fffbeb">💭</div>
+        <div class="step-info"><strong>Bienestar Psicológico</strong><span>Screening SCL · 25 preguntas · Escala 1-5</span></div>
+      </div>
+      <div class="step-row">
+        <div class="step-ico" style="background:#ecfdf5">📚</div>
+        <div class="step-info"><strong>Conocimientos del Cargo</strong><span>12 preguntas · Opción múltiple</span></div>
+      </div>
+      <div class="step-row">
+        <div class="step-ico" style="background:#f5f3ff">👤</div>
+        <div class="step-info"><strong>Datos Personales</strong><span>14 preguntas · Respuesta libre</span></div>
+      </div>
     </div>
 
-    <button class="btn-start" id="btn-start" onclick="iniciarTest()" disabled>Comenzar evaluación →</button>
+    <div class="field-card" style="background:#fffbeb;border:1px solid #fcd34d">
+      <p style="font-size:13px;color:#92400e;line-height:1.6">
+        ⏱ Tienes <strong>60 minutos</strong> en total.<br>
+        📵 No cierres esta pestaña mientras haces el test.<br>
+        ✅ Puedes navegar entre secciones antes de enviar.
+      </p>
+    </div>
 
-    <details class="reset-panel" style="margin-top:16px">
+    <button class="btn-start" id="btn-start" onclick="iniciarTest()" disabled>
+      Comenzar evaluación →
+    </button>
+
+    <details class="reset-wrap" style="margin-top:14px">
       <summary>🔄 Resetear candidato (solo para pruebas)</summary>
-      <div style="margin-top:12px">
-        <select id="sel-reset" style="margin-bottom:10px">
-          <option value="">— Selecciona candidato —</option>
-        </select>
-        <button onclick="resetearCandidato()" style="width:100%;padding:10px;background:#dc2626;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600">
-          ⚠️ Borrar datos de este candidato
-        </button>
-      </div>
+      <select id="sel-reset"><option value="">— Candidato a resetear —</option></select>
+      <button class="btn-reset" onclick="resetearCandidato()">⚠️ Borrar datos de este candidato</button>
     </details>
   </div>
 
-  <!-- CONTENIDO DEL TEST (generado dinámicamente) -->
-  <div id="screen-test" style="display:none"></div>
+  <!-- ── TEST ── -->
+  <div id="screen-test"></div>
 
-  <!-- PANTALLA FIN -->
+  <!-- ── FIN ── -->
   <div id="screen-fin">
-    <div class="ico">✅</div>
-    <h2>¡Evaluación completada!</h2>
-    <p>Tus respuestas han sido guardadas correctamente.<br>Puedes cerrar esta pestaña.</p>
+    <div class="fin-ico">✅</div>
+    <div class="fin-title">¡Evaluación completada!</div>
+    <div class="fin-sub">Tus respuestas han sido guardadas correctamente.<br>Puedes cerrar esta pestaña.</div>
   </div>
 
-</div>
+</div><!-- /inner -->
+</div><!-- /wrap -->
 
-<!-- FOOTER NAVEGACIÓN (solo durante el test) -->
+<!-- ── FOOTER NAVEGACIÓN ── -->
 <div id="nav-footer" style="display:none">
   <div class="nav-inner">
-    <button class="btn-nav btn-prev" id="btn-prev" onclick="irPaso(-1)">← Anterior</button>
-    <span class="prog-text" id="prog-text">0 / 0 respondidas</span>
-    <button class="btn-nav btn-next" id="btn-next" onclick="irPaso(1)">Siguiente →</button>
+    <button class="btn-prev" id="btn-prev" onclick="irPaso(-1)">← Atrás</button>
+    <div class="prog-wrap">
+      <div class="prog-label" id="prog-label">0 / 0 respondidas</div>
+      <div class="prog-bar-mini"><div class="prog-bar-fill" id="prog-bar-fill" style="width:0%"></div></div>
+    </div>
+    <button class="btn-next" id="btn-next" onclick="irPaso(1)">Continuar →</button>
   </div>
 </div>
 
+<!-- ── FIREBASE ── -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js"></script>
 <script>
-// ── FIREBASE ───────────────────────────────
-const firebaseConfig={
+const fbApp=firebase.initializeApp({
   apiKey:"AIzaSyB9bOIeXc1OBYa0Vsst6EDV0TxyPt121XU",
   authDomain:"rrhh-sistema-87426.firebaseapp.com",
   databaseURL:"https://rrhh-sistema-87426-default-rtdb.firebaseio.com",
@@ -207,29 +398,27 @@ const firebaseConfig={
   storageBucket:"rrhh-sistema-87426.firebasestorage.app",
   messagingSenderId:"432686202734",
   appId:"1:432686202734:web:21f822d71754688d328b7f"
-};
-const fbApp=firebase.initializeApp(firebaseConfig);
+});
 const fbdb=firebase.database();
 </script>
+
+<!-- ── DATOS ── -->
 <script>
-// ══════════════════════════════════════════════════════
-// DATOS DE TESTS
-// ══════════════════════════════════════════════════════
 var BIG5=[
-  {id:'b1',dim:'E',inv:false,txt:'Me veo como alguien extrovertido/a, entusiasta.'},
-  {id:'b2',dim:'A',inv:true, txt:'Me veo como alguien crítico/a, que suele discutir.'},
-  {id:'b3',dim:'C',inv:false,txt:'Me veo como alguien confiable, autodisciplinado/a.'},
-  {id:'b4',dim:'N',inv:true, txt:'Me veo como alguien relajado/a, que maneja bien el estrés.'},
-  {id:'b5',dim:'O',inv:false,txt:'Me veo como alguien abierto/a a nuevas experiencias, con imaginación.'},
-  {id:'b6',dim:'E',inv:true, txt:'Me veo como alguien reservado/a, tranquilo/a.'},
-  {id:'b7',dim:'A',inv:false,txt:'Me veo como alguien empático/a, afectuoso/a con los demás.'},
-  {id:'b8',dim:'C',inv:true, txt:'Me veo como alguien desorganizado/a, descuidado/a.'},
-  {id:'b9',dim:'N',inv:false,txt:'Me veo como alguien que se asusta fácilmente, ansioso/a.'},
+  {id:'b1', dim:'E',inv:false,txt:'Me veo como alguien extrovertido/a, entusiasta.'},
+  {id:'b2', dim:'A',inv:true, txt:'Me veo como alguien crítico/a, que suele discutir.'},
+  {id:'b3', dim:'C',inv:false,txt:'Me veo como alguien confiable, autodisciplinado/a.'},
+  {id:'b4', dim:'N',inv:true, txt:'Me veo como alguien relajado/a, que maneja bien el estrés.'},
+  {id:'b5', dim:'O',inv:false,txt:'Me veo como alguien abierto/a a nuevas experiencias, con imaginación.'},
+  {id:'b6', dim:'E',inv:true, txt:'Me veo como alguien reservado/a, tranquilo/a.'},
+  {id:'b7', dim:'A',inv:false,txt:'Me veo como alguien empático/a, afectuoso/a con los demás.'},
+  {id:'b8', dim:'C',inv:true, txt:'Me veo como alguien desorganizado/a, descuidado/a.'},
+  {id:'b9', dim:'N',inv:false,txt:'Me veo como alguien que se asusta fácilmente, ansioso/a.'},
   {id:'b10',dim:'O',inv:true, txt:'Me veo como alguien que gusta de las rutinas, poco creativo/a.'},
   {id:'b11',dim:'E',inv:false,txt:'Me veo como alguien que genera entusiasmo en otros.'},
   {id:'b12',dim:'A',inv:true, txt:'Me veo como alguien que tiende a tener conflictos con otros.'},
   {id:'b13',dim:'C',inv:false,txt:'Me veo como alguien que hace las cosas con cuidado y atención.'},
-  {id:'b14',dim:'N',inv:true, txt:'Me veo como alguien que la depresión y melancolía le afecta poco.'},
+  {id:'b14',dim:'N',inv:true, txt:'Me veo como alguien a quien la depresión y melancolía le afecta poco.'},
   {id:'b15',dim:'O',inv:false,txt:'Me veo como alguien con muchos intereses artísticos y culturales.'},
   {id:'b16',dim:'E',inv:true, txt:'Soy una persona seria y poco comunicativa.'},
   {id:'b17',dim:'A',inv:false,txt:'Me veo como alguien que ayuda a otros desinteresadamente.'},
@@ -237,104 +426,157 @@ var BIG5=[
   {id:'b19',dim:'N',inv:false,txt:'Frecuentemente me preocupo por cosas.'},
   {id:'b20',dim:'O',inv:true, txt:'Prefiero lo tradicional, no cosas nuevas y diferentes.'}
 ];
-var SCREENING=[
-  {id:'s1',dim:'SOM',txt:'¿Con qué frecuencia sufres dolores de cabeza?'},
-  {id:'s2',dim:'SOM',txt:'¿Padeces dolor en el cuello o la espalda?'},
-  {id:'s3',dim:'SOM',txt:'¿Tienes molestias estomacales?'},
-  {id:'s4',dim:'SOM',txt:'¿Presentas dificultad para respirar?'},
-  {id:'s5',dim:'ANS',txt:'¿Sientes ansiedad o nerviosismo excesivo?'},
-  {id:'s6',dim:'ANS',txt:'¿Padeces ataques de pánico?'},
-  {id:'s7',dim:'ANS',txt:'¿Tienes problemas para dormir?'},
-  {id:'s8',dim:'DEP',txt:'¿Te sientes triste o deprimido/a frecuentemente?'},
-  {id:'s9',dim:'DEP',txt:'¿Has perdido interés en cosas que antes te gustaban?'},
-  {id:'s10',dim:'DEP',txt:'¿Sientes falta de energía o cansancio excesivo?'},
-  {id:'s11',dim:'HOH',txt:'¿Has tenido pensamiento suicida?'},
-  {id:'s12',dim:'HOH',txt:'¿Te resulta difícil controlar tus emociones?'},
-  {id:'s13',dim:'SOM',txt:'¿Sufres de diarrea o estreñimiento?'},
-  {id:'s14',dim:'ANS',txt:'¿Sientes tensión muscular?'},
-  {id:'s15',dim:'DEP',txt:'¿Sientes culpa frecuentemente?'},
-  {id:'s16',dim:'HOH',txt:'¿Tienes dificultad para concentrarte?'},
-  {id:'s17',dim:'SOM',txt:'¿Has notado cambios en tu apetito?'},
-  {id:'s18',dim:'ANS',txt:'¿Sientes que tu corazón late irregularmente?'},
-  {id:'s19',dim:'DEP',txt:'¿Te cuesta tomar decisiones?'},
-  {id:'s20',dim:'HOH',txt:'¿Eres muy crítico/a contigo mismo/a?'},
-  {id:'s21',dim:'SOM',txt:'¿Tienes mareos o vértigo?'},
-  {id:'s22',dim:'ANS',txt:'¿Sufres de temblores?'},
-  {id:'s23',dim:'DEP',txt:'¿Sientes que la vida no tiene sentido?'},
-  {id:'s24',dim:'HOH',txt:'¿Te cuesta expresar tus emociones?'},
-  {id:'s25',dim:'SOM',txt:'¿Padeces sudoración nocturna?'}
+var SCL=[
+  {id:'s1', dim:'SOM',txt:'Dolores de cabeza frecuentes sin causa médica clara.'},
+  {id:'s2', dim:'SOM',txt:'Sensación de desmayo o mareo.'},
+  {id:'s3', dim:'ANS',txt:'Nerviosismo o agitación interior que no puede controlar.'},
+  {id:'s4', dim:'ANS',txt:'Temblores en el cuerpo sin razón aparente.'},
+  {id:'s5', dim:'ANS',txt:'Ataques de pánico o terror repentino.'},
+  {id:'s6', dim:'DEP',txt:'Sentirse sin esperanza sobre el futuro.'},
+  {id:'s7', dim:'DEP',txt:'Sentirse solo/a aunque esté acompañado/a.'},
+  {id:'s8', dim:'DEP',txt:'Pensamientos de hacerse daño a sí mismo/a.'},
+  {id:'s9', dim:'HOS',txt:'Accesos de cólera que no puede controlar.'},
+  {id:'s10',dim:'HOS',txt:'Impulsos de golpear, lastimar o hacerle daño a alguien.'},
+  {id:'s11',dim:'HOS',txt:'Tener ganas de romper o destruir cosas.'},
+  {id:'s12',dim:'PAR',txt:'Sentir que otras personas le observan o hablan de usted.'},
+  {id:'s13',dim:'PAR',txt:'Tener la sensación de que otros tienen la culpa de sus problemas.'},
+  {id:'s14',dim:'PAR',txt:'Sentir desconfianza hacia la mayoría de personas.'},
+  {id:'s15',dim:'PSI',txt:'Tener pensamientos que no son suyos o que le son impuestos.'},
+  {id:'s16',dim:'PSI',txt:'Escuchar voces que otros no pueden escuchar.'},
+  {id:'s17',dim:'OBS',txt:'Tener que hacer las cosas muy despacio para hacerlas bien.'},
+  {id:'s18',dim:'OBS',txt:'Comprobar varias veces lo que hace (apagar la llave, cerrar la puerta, etc).'},
+  {id:'s19',dim:'SIN',txt:'Sentirse inferior a los demás.'},
+  {id:'s20',dim:'SIN',txt:'Sentirse incómodo/a cuando la gente le mira o habla de usted.'},
+  {id:'s21',dim:'ANS',txt:'Sentirse tan inquieto/a que no puede estar sentado/a tranquilo/a.'},
+  {id:'s22',dim:'DEP',txt:'Sentirse sin energía o sin fuerzas.'},
+  {id:'s23',dim:'SOM',txt:'Sensación de pesadez en brazos o piernas.'},
+  {id:'s24',dim:'HOS',txt:'Irritarse o exasperarse con facilidad.'},
+  {id:'s25',dim:'PAR',txt:'Sentir que no puede confiar en nadie.'}
 ];
 var CARGO=[
-  {id:'c1',txt:'¿Cuál es el criterio principal al organizar productos en una bodega?',opts:['Por orden de llegada','Por color del empaque','Por tipo, peso y rotación ABC','Aleatoriamente'],correcta:2},
-  {id:'c2',txt:'¿Cómo garantizar estabilidad al apilar cajas?',opts:['Apilar rápido','Acomodar forma cruzada/trabada','Cajas pesadas arriba','Empujar con los pies'],correcta:1},
-  {id:'c3',txt:'¿Cómo distribuir el peso en un palet?',opts:['Concentrar en el centro','Uniforme en toda la superficie','Apilar en un lado','Superar límite 10%'],correcta:1},
-  {id:'c4',txt:'¿Cuál es el EPP obligatorio?',opts:['Ropa cómoda','Casco, guantes, chaleco, zapatos acero','Solo faja lumbar','No se requiere EPP'],correcta:1},
-  {id:'c5',txt:'¿Qué hacer si detectas daños en una estructura?',opts:['Reparar tú mismo','Ignorarlo','Reportar inmediatamente','Esperar inventario'],correcta:2},
-  {id:'c6',txt:'¿Qué hacer ANTES de firmar recepción?',opts:['Guardar inmediatamente','Verificar estado y cantidad','Firmar rápido','Marcar como aprobado'],correcta:1},
-  {id:'c7',txt:'¿Función principal de una picking list?',opts:['Comprobante de pago','Detalle de productos y ubicaciones','Registro de entrada/salida','Mostrar catálogo'],correcta:1},
-  {id:'c8',txt:'¿Qué control antes de despacho?',opts:['Ninguno','Confirmar cantidad y código','Envolver al azar','Cambiar etiquetas'],correcta:1},
-  {id:'c9',txt:'¿Objetivo del etiquetado y códigos?',opts:['Mejora comercial','Decoración','Trazabilidad e identificación','Ocultar defectos'],correcta:2},
-  {id:'c10',txt:'¿Manejo correcto de inventario?',opts:['Dejar cajas abiertas','Registrar inmediatamente','Registrar al final del mes','Colocar devoluciones al azar'],correcta:1},
-  {id:'c11',txt:'Un palet tiene 4 filas de 6 cajas cada una. ¿Total?',opts:['20 cajas','24 cajas','30 cajas','36 cajas'],correcta:1},
-  {id:'c12',txt:'Repuesto 10kg, 3 por caja, ¿peso 2 cajas?',opts:['20 kg','30 kg','60 kg','12 kg'],correcta:2}
+  {id:'c1', txt:'¿Cuál es el criterio principal al organizar productos en una bodega?',opts:['Por orden de llegada','Por color del empaque','Por tipo, peso y rotación ABC','Aleatoriamente'],correcta:2},
+  {id:'c2', txt:'¿Cómo garantizar estabilidad al apilar cajas?',opts:['Apilar rápido','Acomodar forma cruzada/trabada','Cajas pesadas arriba','Empujar con los pies'],correcta:1},
+  {id:'c3', txt:'¿Cómo distribuir el peso en un palet?',opts:['Concentrar en el centro','Uniforme en toda la superficie','Apilar en un lado','Superar límite 10%'],correcta:1},
+  {id:'c4', txt:'¿Cuál es el EPP obligatorio en bodega?',opts:['Ropa cómoda','Casco, guantes, chaleco, zapatos de acero','Solo faja lumbar','No se requiere EPP'],correcta:1},
+  {id:'c5', txt:'¿Qué hacer si detectas daños en una estructura?',opts:['Repararla tú mismo','Ignorarlo','Reportar inmediatamente','Esperar el inventario'],correcta:2},
+  {id:'c6', txt:'¿Qué hacer ANTES de firmar la recepción de mercancía?',opts:['Guardar inmediatamente','Verificar estado y cantidad','Firmar rápido','Marcar como aprobado'],correcta:1},
+  {id:'c7', txt:'¿Función principal de una picking list?',opts:['Comprobante de pago','Detalle de productos y ubicaciones','Registro de entrada/salida','Mostrar catálogo'],correcta:1},
+  {id:'c8', txt:'¿Qué control se debe hacer antes del despacho?',opts:['Ninguno','Confirmar cantidad y código del producto','Envolver al azar','Cambiar etiquetas'],correcta:1},
+  {id:'c9', txt:'¿Cuál es el objetivo del etiquetado y códigos de barras?',opts:['Mejora comercial','Decoración','Trazabilidad e identificación','Ocultar defectos'],correcta:2},
+  {id:'c10',txt:'¿Cuál es el manejo correcto de devoluciones en inventario?',opts:['Dejar cajas abiertas','Registrar inmediatamente','Registrar al final del mes','Colocar al azar'],correcta:1},
+  {id:'c11',txt:'Un palet tiene 4 filas de 6 cajas cada una. ¿Cuántas cajas en total?',opts:['20 cajas','24 cajas','30 cajas','36 cajas'],correcta:1},
+  {id:'c12',txt:'Un repuesto pesa 10 kg y vienen 3 por caja. ¿Cuánto pesan 2 cajas?',opts:['20 kg','30 kg','60 kg','12 kg'],correcta:2}
 ];
-var ENTREVISTA=[
-  {id:'e1',txt:'¿Cuál es tu estado civil?'},
-  {id:'e2',txt:'¿Tienes hijos? Si es así, ¿cuántos y qué edades?'},
-  {id:'e3',txt:'¿Dónde vives? (zona/barrio)'},
-  {id:'e4',txt:'¿Tienes medio de transporte propio?'},
-  {id:'e5',txt:'¿Cuál es tu aspiración salarial?'},
-  {id:'e6',txt:'¿Cuál es tu disponibilidad de horario?'},
-  {id:'e7',txt:'¿Padeces alguna discapacidad o enfermedad catastrófica?'},
-  {id:'e8',txt:'¿Actualmente estudias? ¿Qué carrera/nivel?'},
-  {id:'e9',txt:'¿Cuántos años de experiencia tienes en trabajos similares?'},
-  {id:'e10',txt:'¿Por qué te interesa este puesto?'},
-  {id:'e11',txt:'¿Cuáles son tus fortalezas principales?'},
-  {id:'e12',txt:'¿Cuál es un área en la que te gustaría mejorar?'},
-  {id:'e13',txt:'¿Has trabajado en equipo? Describe una experiencia.'},
-  {id:'e14',txt:'¿Tienes referencias de trabajos anteriores?'}
+var FICHA=[
+  {id:'f1', txt:'¿Cuál es tu estado civil?'},
+  {id:'f2', txt:'¿Tienes hijos? Si es así, ¿cuántos y qué edades?'},
+  {id:'f3', txt:'¿Dónde vives? (sector / barrio)'},
+  {id:'f4', txt:'¿Tienes medio de transporte propio?'},
+  {id:'f5', txt:'¿Cuál es tu aspiración salarial?'},
+  {id:'f6', txt:'¿Cuál es tu disponibilidad de horario?'},
+  {id:'f7', txt:'¿Padeces alguna discapacidad o enfermedad catastrófica?'},
+  {id:'f8', txt:'¿Actualmente estudias? ¿Qué carrera o nivel?'},
+  {id:'f9', txt:'¿Cuántos años de experiencia tienes en trabajos similares?'},
+  {id:'f10',txt:'¿Por qué te interesa este puesto?'},
+  {id:'f11',txt:'¿Cuáles son tus fortalezas principales?'},
+  {id:'f12',txt:'¿Cuál es un área en la que te gustaría mejorar?'},
+  {id:'f13',txt:'¿Has trabajado en equipo? Describe una experiencia.'},
+  {id:'f14',txt:'¿Tienes referencias de trabajos anteriores?'}
 ];
 
-// ── PASOS DEL WIZARD ────────────────────────
+// Metadatos de cada dimensión
+var DIM_META={
+  // Big5
+  E:{label:'Extraversión',    color:'#4f46e5',bg:'#eef2ff'},
+  A:{label:'Amabilidad',      color:'#059669',bg:'#ecfdf5'},
+  C:{label:'Responsabilidad', color:'#7c3aed',bg:'#f5f3ff'},
+  N:{label:'Neuroticismo',    color:'#dc2626',bg:'#fff1f2'},
+  O:{label:'Apertura',        color:'#d97706',bg:'#fffbeb'},
+  // SCL
+  SOM:{label:'Somatización',          color:'#ea580c',bg:'#fff7ed'},
+  ANS:{label:'Ansiedad',              color:'#d97706',bg:'#fffbeb'},
+  DEP:{label:'Depresión',             color:'#2563eb',bg:'#eff6ff'},
+  HOS:{label:'Hostilidad',            color:'#dc2626',bg:'#fff1f2'},
+  PAR:{label:'Paranoia',              color:'#7c3aed',bg:'#f5f3ff'},
+  PSI:{label:'Psicoticismo',          color:'#0f766e',bg:'#f0fdfa'},
+  OBS:{label:'Obsesión',              color:'#6d28d9',bg:'#f5f3ff'},
+  SIN:{label:'Sens. Interpersonal',   color:'#0284c7',bg:'#f0f9ff'},
+};
+
+// Configuración de cada PASO
 var PASOS=[
-  {key:'big5',   label:'Personalidad',   icon:'🧠', desc:'Test Big Five',             instruccion:'Indica tu grado de acuerdo con cada afirmación (1=Muy en desacuerdo, 5=Muy de acuerdo).',       escalaMin:'Muy en desacuerdo', escalaMax:'Muy de acuerdo', min:1, max:5, pregs:BIG5,      tipo:'escala'},
-  {key:'scl',    label:'Bienestar',      icon:'💭', desc:'Screening Psicológico',      instruccion:'Indica con qué frecuencia has experimentado cada situación en los últimos 30 días.',             escalaMin:'Nunca',             escalaMax:'Siempre',         min:1, max:5, pregs:SCREENING,  tipo:'escala'},
-  {key:'cargo',  label:'Conocimientos',  icon:'📚', desc:'Test de Cargo',              instruccion:'Selecciona la respuesta correcta para cada pregunta.',                                            escalaMin:'',                  escalaMax:'',                min:0, max:0, pregs:CARGO,      tipo:'opciones'},
-  {key:'ficha',  label:'Datos Personales',icon:'👤', desc:'Ficha del Candidato',       instruccion:'Completa tus datos personales con honestidad.',                                                   escalaMin:'',                  escalaMax:'',                min:0, max:0, pregs:ENTREVISTA, tipo:'texto'}
+  {
+    key:'big5', icon:'🧠', label:'Personalidad',
+    color:'#4f46e5', colorBg:'#eef2ff',
+    desc:'Test de Personalidad Big Five',
+    instr:'Indica tu grado de acuerdo con cada afirmación.',
+    escMin:'Muy en desacuerdo', escMax:'Muy de acuerdo',
+    min:1, max:5, tipo:'escala', pregs:BIG5
+  },
+  {
+    key:'scl', icon:'💭', label:'Bienestar',
+    color:'#d97706', colorBg:'#fffbeb',
+    desc:'Screening Psicológico',
+    instr:'Indica con qué frecuencia has experimentado cada situación en los últimos 30 días.',
+    escMin:'Nunca', escMax:'Siempre',
+    min:1, max:5, tipo:'escala', pregs:SCL
+  },
+  {
+    key:'cargo', icon:'📚', label:'Conocimientos',
+    color:'#059669', colorBg:'#ecfdf5',
+    desc:'Test de Conocimientos del Cargo',
+    instr:'Selecciona la respuesta correcta para cada pregunta.',
+    min:0, max:0, tipo:'opciones', pregs:CARGO
+  },
+  {
+    key:'ficha', icon:'👤', label:'Datos Personales',
+    color:'#7c3aed', colorBg:'#f5f3ff',
+    desc:'Ficha del Candidato',
+    instr:'Completa tus datos personales con honestidad.',
+    min:0, max:0, tipo:'texto', pregs:FICHA
+  }
 ];
+</script>
 
-// ── ESTADO ───────────────────────────────────
+<!-- ── LÓGICA ── -->
+<script>
 var respuestas={};
 var candId='',convId='',pasoActual=0,timerInt=null,MINS=60;
 
-// ── CARGA INICIAL ─────────────────────────────
+// ─── SETUP INICIAL ─────────────────────────────────
 function cargarConvs(){
   try{
     var cs=JSON.parse(localStorage.getItem('rrhh_convs')||'[]');
     var sel=document.getElementById('sel-conv');
-    cs.forEach(function(c){var o=document.createElement('option');o.value=c.id;o.textContent=c.titulo;sel.appendChild(o);});
+    cs.forEach(function(c){
+      var o=document.createElement('option');o.value=c.id;o.textContent=c.titulo;sel.appendChild(o);
+    });
   }catch(e){}
 }
-function llenarSelectorReset(){
+function llenarReset(){
   try{
-    var cands=JSON.parse(localStorage.getItem('rrhh_cands')||'[]');
+    var cs=JSON.parse(localStorage.getItem('rrhh_cands')||'[]');
     var sel=document.getElementById('sel-reset');
-    cands.forEach(function(c){var o=document.createElement('option');o.value=c.id;o.textContent=c.apellidos+', '+c.nombres;sel.appendChild(o);});
+    cs.forEach(function(c){
+      var o=document.createElement('option');o.value=c.id;o.textContent=c.apellidos+', '+c.nombres;sel.appendChild(o);
+    });
   }catch(e){}
 }
-
 document.getElementById('sel-conv').addEventListener('change',function(){
   convId=this.value;
   var s=document.getElementById('sel-cand');
   s.innerHTML='<option value="">— Seleccionar candidato —</option>';
-  if(!convId){s.disabled=true;actualizarBoton();return;}
-  s.disabled=false;
-  try{
-    var cs=JSON.parse(localStorage.getItem('rrhh_cands')||'[]');
-    cs.filter(function(c){return c.convocatoriaId===convId;}).forEach(function(c){
-      var o=document.createElement('option');o.value=c.id;o.textContent=c.apellidos+', '+c.nombres;s.appendChild(o);
-    });
-  }catch(e){}
+  s.disabled=!convId;
+  if(convId){
+    try{
+      JSON.parse(localStorage.getItem('rrhh_cands')||'[]')
+        .filter(function(c){return c.convocatoriaId===convId;})
+        .forEach(function(c){
+          var o=document.createElement('option');o.value=c.id;
+          o.textContent=c.apellidos+', '+c.nombres;s.appendChild(o);
+        });
+    }catch(e){}
+  }
   actualizarBoton();
 });
 document.getElementById('sel-cand').addEventListener('change',function(){
@@ -344,142 +586,196 @@ document.getElementById('sel-cand').addEventListener('change',function(){
   document.getElementById('timer').className='';
   actualizarBoton();
 });
-function actualizarBoton(){document.getElementById('btn-start').disabled=!candId||!convId;}
-
-// ── STEPPER UI ────────────────────────────────
-function renderStepper(){
-  var html=PASOS.map(function(p,i){
-    var cls=i<pasoActual?'done':i===pasoActual?'active':'';
-    return'<div class="step-item '+cls+'" onclick="irPasoDirecto('+i+')" title="'+p.desc+'">'
-      +'<div class="step-num">'+(i<pasoActual?'✓':(i+1))+'</div>'
-      +'<span>'+p.icon+' '+p.label+'</span>'
-      +'</div>';
-  }).join('');
-  document.getElementById('stepper').innerHTML=html;
+function actualizarBoton(){
+  document.getElementById('btn-start').disabled=!candId||!convId;
 }
 
-// ── RENDERIZAR PASO ACTUAL ─────────────────────
+// ─── STEPPER ───────────────────────────────────────
+function renderStepper(){
+  var html='';
+  PASOS.forEach(function(p,i){
+    var isDone=i<pasoActual, isActive=i===pasoActual;
+    var cls=isDone?'done':isActive?'active':'';
+    if(i>0)html+='<div class="stp-line'+(i<=pasoActual?' done':'')+'"></div>';
+    html+='<div class="stp"><div class="stp-dot '+cls+'">'+(isDone?'✓':(i+1))+'</div>'
+      +'<span class="stp-label '+cls+'">'+p.icon+' '+p.label+'</span></div>';
+  });
+  document.getElementById('stepper').innerHTML=html;
+  // Aplicar color de paso al CSS
+  var paso=PASOS[pasoActual];
+  document.documentElement.style.setProperty('--step-color',paso.color);
+  document.documentElement.style.setProperty('--step-bg',paso.colorBg);
+  document.getElementById('topbar').style.background=paso.color;
+  document.getElementById('topbar-icon').textContent=paso.icon;
+  document.getElementById('topbar-title').textContent=paso.desc;
+  document.getElementById('topbar-sub').textContent='Sección '+(pasoActual+1)+' de '+PASOS.length;
+}
+
+// ─── RENDER DEL PASO ───────────────────────────────
 function renderPaso(){
   var paso=PASOS[pasoActual];
-  var html='<div class="step-header">'
-    +'<h2>'+paso.icon+' '+paso.desc+'</h2>'
-    +'<p>'+paso.instruccion+'</p>'
-    +'<div class="step-meta"><span class="step-tag">Paso '+(pasoActual+1)+' de '+PASOS.length+'</span>'
-    +'<span class="step-tag">'+paso.pregs.length+' preguntas</span></div>'
-    +'</div>';
+  var html='';
 
+  // Banner de la rama
+  html+='<div class="rama-header">'
+    +'<div class="tag">'+paso.icon+' Sección '+(pasoActual+1)+' de '+PASOS.length+'</div>'
+    +'<h2>'+paso.desc+'</h2>'
+    +'<p>'+paso.instr+'</p>'
+    +'<div class="rama-meta">'
+    +'<span class="rama-chip">'+paso.pregs.length+' preguntas</span>'
+    +(paso.tipo==='escala'?'<span class="rama-chip">Escala '+paso.min+' – '+paso.max+'</span>':'')
+    +(paso.tipo==='opciones'?'<span class="rama-chip">Opción múltiple</span>':'')
+    +(paso.tipo==='texto'?'<span class="rama-chip">Respuesta libre</span>':'')
+    +'</div></div>';
+
+  var prevDim='';
   paso.pregs.forEach(function(p,idx){
-    html+='<div class="bloque" id="wrap_'+p.id+'">'
-      +'<div class="preg-num">'+paso.label.toUpperCase()+' — '+(idx+1)+' / '+paso.pregs.length+'</div>'
-      +'<div class="preg-txt">'+p.txt+'</div>';
+    var dm=p.dim?DIM_META[p.dim]:null;
+
+    // Separador de dimensión cuando cambia
+    if(p.dim&&p.dim!==prevDim&&paso.tipo==='escala'){
+      var dimColor=dm?dm.color:paso.color;
+      var dimBg  =dm?dm.bg  :paso.colorBg;
+      html+='<div class="dim-sep">'
+        +'<div class="dim-sep-line"></div>'
+        +'<div class="dim-sep-label" style="background:'+dimBg+';color:'+dimColor+'">'
+        +(dm?dm.label:p.dim)+'</div>'
+        +'<div class="dim-sep-line"></div>'
+        +'</div>';
+      prevDim=p.dim;
+    }
+
+    html+='<div class="q-card" id="wrap_'+p.id+'">';
+    html+='<div class="q-top">';
+    html+='<span class="q-num">'+paso.label+' · '+(idx+1)+'/'+paso.pregs.length+'</span>';
+    if(dm){html+='<span class="q-dim" style="background:'+dm.bg+';color:'+dm.color+'">'+dm.label+'</span>';}
+    html+='</div>';
+    html+='<div class="q-txt">'+p.txt+'</div>';
 
     if(paso.tipo==='escala'){
       var cur=respuestas[p.id]||'';
       html+='<div class="escala-wrap"><div class="escala-pts">';
       for(var v=paso.min;v<=paso.max;v++){
-        html+='<button class="pt'+(cur==v?' sel':'')+'" id="pt_'+p.id+'_'+v+'" onclick="selPt(\''+p.id+'\','+v+','+paso.min+','+paso.max+')">'+v+'</button>';
+        html+='<button class="pt'+(cur==v?' sel':'')+'" id="pt_'+p.id+'_'+v
+          +'" onclick="selPt(\''+p.id+'\','+v+','+paso.min+','+paso.max+')">'+v+'</button>';
       }
-      html+='</div><div class="escala-lbl"><span>'+paso.escalaMin+'</span><span>'+paso.escalaMax+'</span></div></div>';
+      html+='</div><div class="escala-lbl"><span>'+paso.escMin+'</span><span>'+paso.escMax+'</span></div></div>';
 
     }else if(paso.tipo==='opciones'){
       var letras=['A','B','C','D'];
       html+='<div class="opciones">';
       (p.opts||[]).forEach(function(opt,i){
         var isSel=respuestas[p.id]===i;
-        html+='<div class="opcion'+(isSel?' sel':'')+'" id="op_'+p.id+'_'+i+'" onclick="selOp(\''+p.id+'\','+i+')">'
-          +'<div class="opcion-letra">'+letras[i]+'</div>'
-          +'<span>'+opt+'</span>'
-          +'</div>';
+        html+='<button class="opcion'+(isSel?' sel':'')+'" onclick="selOp(\''+p.id+'\','+i+')">'
+          +'<div class="op-letra">'+letras[i]+'</div>'
+          +'<div class="op-txt">'+opt+'</div>'
+          +'</button>';
       });
       html+='</div>';
 
     }else{
       var val=respuestas[p.id]||'';
-      html+='<textarea class="resp-open" id="resp_'+p.id+'" placeholder="Escribe tu respuesta..." oninput="responder(\''+p.id+'\',this.value)">'+val+'</textarea>';
+      html+='<textarea class="resp-open" id="resp_'+p.id+'" placeholder="Escribe tu respuesta..." '
+        +'oninput="responder(\''+p.id+'\',this.value)">'+val+'</textarea>';
     }
     html+='</div>';
   });
 
   document.getElementById('screen-test').innerHTML=html;
   actualizarProgreso();
-  actualizarNavFooter();
-  window.scrollTo(0,0);
+  actualizarFooter();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
-// ── RESPONDER ─────────────────────────────────
+// ─── RESPUESTAS ────────────────────────────────────
 function selPt(pid,val,min,max){
   respuestas[pid]=val;
-  for(var v=min;v<=max;v++){var el=document.getElementById('pt_'+pid+'_'+v);if(el)el.classList.toggle('sel',v===val);}
-  var wrap=document.getElementById('wrap_'+pid);if(wrap)wrap.classList.remove('sin-resp');
+  for(var v=min;v<=max;v++){
+    var el=document.getElementById('pt_'+pid+'_'+v);
+    if(el)el.classList.toggle('sel',v===val);
+  }
+  var wrap=document.getElementById('wrap_'+pid);
+  if(wrap)wrap.classList.remove('sin-resp');
   actualizarProgreso();
 }
 function selOp(pid,idx){
   respuestas[pid]=idx;
   var paso=PASOS[pasoActual];
-  (paso.pregs.find(function(p){return p.id===pid;})||{opts:[]}).opts.forEach(function(_,i){
-    var el=document.getElementById('op_'+pid+'_'+i);if(el)el.classList.toggle('sel',i===idx);
-  });
-  var wrap=document.getElementById('wrap_'+pid);if(wrap)wrap.classList.remove('sin-resp');
+  var p=paso.pregs.find(function(x){return x.id===pid;});
+  if(p&&p.opts){
+    p.opts.forEach(function(_,i){
+      var el=document.getElementById('op_'+pid+'_'+i);
+      if(el){el.classList.toggle('sel',i===idx);
+        var letra=el.querySelector('.op-letra');
+        if(letra)letra.style.background=i===idx?paso.color:'';
+        if(letra)letra.style.color=i===idx?'#fff':'';
+      }
+    });
+  }
+  var wrap=document.getElementById('wrap_'+pid);
+  if(wrap)wrap.classList.remove('sin-resp');
   actualizarProgreso();
 }
 function responder(pid,val){
   respuestas[pid]=val;
-  var wrap=document.getElementById('wrap_'+pid);if(wrap)wrap.classList.remove('sin-resp');
+  var wrap=document.getElementById('wrap_'+pid);
+  if(wrap)wrap.classList.remove('sin-resp');
   actualizarProgreso();
 }
 
-// ── PROGRESO ──────────────────────────────────
+// ─── PROGRESO ──────────────────────────────────────
 function actualizarProgreso(){
   var paso=PASOS[pasoActual];
-  var resp=paso.pregs.filter(function(p){var v=respuestas[p.id];return v!==''&&v!==null&&v!==undefined;}).length;
+  var resp=paso.pregs.filter(function(p){
+    var v=respuestas[p.id];return v!==''&&v!==null&&v!==undefined;
+  }).length;
   var total=paso.pregs.length;
-  document.getElementById('prog-text').textContent=resp+' / '+total+' respondidas';
-  // Barra de progreso global
-  var globalResp=0,globalTotal=0;
+  var pct=Math.round(resp/total*100);
+  document.getElementById('prog-label').textContent=resp+' / '+total+' respondidas';
+  document.getElementById('prog-bar-fill').style.width=pct+'%';
+  // Barra global
+  var gResp=0,gTotal=0;
   PASOS.forEach(function(ps){
-    globalTotal+=ps.pregs.length;
-    globalResp+=ps.pregs.filter(function(p){var v=respuestas[p.id];return v!==''&&v!==null&&v!==undefined;}).length;
+    gTotal+=ps.pregs.length;
+    gResp+=ps.pregs.filter(function(p){var v=respuestas[p.id];return v!==''&&v!==null&&v!==undefined;}).length;
   });
-  document.getElementById('prog-fill').style.width=Math.round(globalResp/globalTotal*100)+'%';
+  document.getElementById('global-fill').style.width=Math.round(gResp/gTotal*100)+'%';
 }
-function actualizarNavFooter(){
+function actualizarFooter(){
   var esUltimo=pasoActual===PASOS.length-1;
-  var btnNext=document.getElementById('btn-next');
   var btnPrev=document.getElementById('btn-prev');
-  btnPrev.style.display=pasoActual===0?'none':'block';
+  var btnNext=document.getElementById('btn-next');
+  btnPrev.style.visibility=pasoActual===0?'hidden':'visible';
   if(esUltimo){
-    btnNext.textContent='✓ Enviar respuestas';btnNext.className='btn-nav btn-submit';
-    btnNext.onclick=function(){enviarRespuestas(false);};
+    btnNext.textContent='✓ Enviar todo';
+    btnNext.style.background='var(--green)';
+    btnNext.onclick=function(){confirmarEnvio();};
   }else{
-    btnNext.textContent='Siguiente →';btnNext.className='btn-nav btn-next';
+    btnNext.textContent='Continuar →';
+    btnNext.style.background=PASOS[pasoActual].color;
     btnNext.onclick=function(){irPaso(1);};
   }
 }
 
-// ── NAVEGACIÓN ENTRE PASOS ─────────────────────
-function validarPasoActual(){
+// ─── NAVEGACIÓN ────────────────────────────────────
+function validar(){
   var paso=PASOS[pasoActual];
-  var sinResp=paso.pregs.filter(function(p){var v=respuestas[p.id];return v===''||v===null||v===undefined;});
-  if(sinResp.length>0){
-    sinResp.forEach(function(p){var wrap=document.getElementById('wrap_'+p.id);if(wrap)wrap.classList.add('sin-resp');});
-    var first=document.getElementById('wrap_'+sinResp[0].id);
+  var sin=paso.pregs.filter(function(p){var v=respuestas[p.id];return v===''||v===null||v===undefined;});
+  if(sin.length){
+    sin.forEach(function(p){var w=document.getElementById('wrap_'+p.id);if(w)w.classList.add('sin-resp');});
+    var first=document.getElementById('wrap_'+sin[0].id);
     if(first)first.scrollIntoView({behavior:'smooth',block:'center'});
     return false;
   }
   return true;
 }
 function irPaso(delta){
-  if(delta>0&&!validarPasoActual())return;
+  if(delta>0&&!validar())return;
   pasoActual=Math.max(0,Math.min(PASOS.length-1,pasoActual+delta));
   renderStepper();renderPaso();
 }
-function irPasoDirecto(idx){
-  // Solo permitir ir a pasos ya visitados (anteriores al actual)
-  if(idx>=pasoActual)return;
-  pasoActual=idx;renderStepper();renderPaso();
-}
 
-// ── INICIAR TEST ──────────────────────────────
+// ─── INICIO ────────────────────────────────────────
 function iniciarTest(){
   if(!candId||!convId)return;
   pasoActual=0;
@@ -489,18 +785,17 @@ function iniciarTest(){
   document.getElementById('stepper').style.display='flex';
   renderStepper();renderPaso();
   startTimer();
-  window.onbeforeunload=function(){return'¿Seguro que quieres salir? Perderás tus respuestas no guardadas.';};
+  window.onbeforeunload=function(){return'¿Salir? Tus respuestas no guardadas se perderán.';};
 }
 
-// ── TIMER ─────────────────────────────────────
+// ─── TIMER ─────────────────────────────────────────
 function startTimer(){
-  var startKey='rrhh_test_start_'+candId;
-  var saved=localStorage.getItem(startKey);
+  var k='rrhh_test_start_'+candId;
+  var saved=localStorage.getItem(k);
   var startAt=saved?parseInt(saved):Date.now();
-  if(!saved)localStorage.setItem(startKey,startAt);
+  if(!saved)localStorage.setItem(k,startAt);
   function tick(){
-    var elapsed=Math.floor((Date.now()-startAt)/1000);
-    var left=Math.max(0,MINS*60-elapsed);
+    var left=Math.max(0,MINS*60-Math.floor((Date.now()-startAt)/1000));
     var m=Math.floor(left/60),s=left%60;
     var t=document.getElementById('timer');
     t.textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
@@ -510,86 +805,94 @@ function startTimer(){
   tick();timerInt=setInterval(tick,1000);
 }
 
-// ── ENVIAR RESPUESTAS ─────────────────────────
-function enviarRespuestas(auto){
-  if(!auto&&!validarPasoActual())return;
-  clearInterval(timerInt);window.onbeforeunload=null;
+// ─── CONFIRMAR ENVÍO ────────────────────────────────
+function confirmarEnvio(){
+  if(!validar())return;
+  // Contar total sin responder
+  var totalSin=0;
+  PASOS.forEach(function(p){
+    p.pregs.forEach(function(q){var v=respuestas[q.id];if(v===''||v===null||v===undefined)totalSin++;});
+  });
+  var msg=totalSin>0?'Aún tienes '+totalSin+' preguntas sin responder. ¿Enviar igualmente?':'¿Enviar tus respuestas?';
+  if(!confirm(msg))return;
+  enviarRespuestas(false);
+}
 
+// ─── ENVIAR ─────────────────────────────────────────
+function enviarRespuestas(auto){
+  clearInterval(timerInt);window.onbeforeunload=null;
   var allRes=[];
   try{allRes=JSON.parse(localStorage.getItem('rrhh_resultados')||'[]');}catch(e){}
-
   function upsert(reg){
     var idx=allRes.findIndex(function(x){return x.candId===reg.candId&&x.tipo===reg.tipo;});
     if(idx>=0)allRes[idx]=reg;else allRes.push(reg);
   }
   function hoy(){return new Date().toISOString().split('T')[0];}
 
-  // ── BIG FIVE ───────────────────────────────
-  var b5resps=BIG5.map(function(p){return{id:p.id,dim:p.dim,val:respuestas[p.id]||3,inv:p.inv||false};});
-  var b5dims={};
+  // Big5
+  var b5r=BIG5.map(function(p){return{id:p.id,dim:p.dim,val:respuestas[p.id]||3,inv:p.inv||false};});
+  var b5d={};
   ['E','A','C','N','O'].forEach(function(d){
-    var items=b5resps.filter(function(r){return r.dim===d;});
+    var items=b5r.filter(function(r){return r.dim===d;});
     var sum=items.reduce(function(s,r){return s+(r.inv?(6-r.val):r.val);},0);
-    b5dims[d]=items.length?Math.round(sum/items.length*10)/10:0;
+    b5d[d]=items.length?Math.round(sum/items.length*10)/10:0;
   });
-  upsert({candId:candId,tipo:'big5',resps:b5resps,dims:b5dims,fecha:hoy()});
+  upsert({candId:candId,tipo:'big5',resps:b5r,dims:b5d,fecha:hoy()});
 
-  // ── SCL (escala 1-5 → 0-4) ─────────────────
-  var scresps=SCREENING.map(function(p){var rawVal=respuestas[p.id]||1;return{id:p.id,dim:p.dim,val:rawVal-1};});
-  var sclDims={};
-  ['SOM','ANS','DEP','HOH'].forEach(function(d){
-    var items=scresps.filter(function(r){return r.dim===d;});
-    sclDims[d]=items.length?Math.round(items.reduce(function(s,r){return s+r.val;},0)/items.length*10)/10:0;
+  // SCL (1-5 → 0-4)
+  var scr=SCL.map(function(p){var v=respuestas[p.id]||1;return{id:p.id,dim:p.dim,val:v-1};});
+  var scd={};
+  ['SOM','ANS','DEP','HOS','PAR','PSI','OBS','SIN'].forEach(function(d){
+    var items=scr.filter(function(r){return r.dim===d;});
+    scd[d]=items.length?Math.round(items.reduce(function(s,r){return s+r.val;},0)/items.length*10)/10:0;
   });
-  upsert({candId:candId,tipo:'scl',resps:scresps,dims:sclDims,fecha:hoy()});
+  upsert({candId:candId,tipo:'scl',resps:scr,dims:scd,fecha:hoy()});
 
-  // ── CARGO (puntaje calculado) ───────────────
-  var caresps=CARGO.map(function(p){
+  // Cargo
+  var car=CARGO.map(function(p){
     var sel=respuestas[p.id]!==undefined&&respuestas[p.id]!==''?parseInt(respuestas[p.id]):-1;
     return{txt:p.txt,resp:sel,correcta:p.correcta};
   });
-  var correctas=caresps.filter(function(r){return r.resp===r.correcta;}).length;
-  var cargoPuntaje=Math.round(correctas/caresps.length*100);
-  upsert({candId:candId,tipo:'cargo',resps:caresps,puntaje:cargoPuntaje,fecha:hoy()});
+  var hits=car.filter(function(r){return r.resp===r.correcta;}).length;
+  upsert({candId:candId,tipo:'cargo',resps:car,puntaje:Math.round(hits/car.length*100),fecha:hoy()});
 
-  // ── FICHA PERSONAL ─────────────────────────
-  var fichaResps=ENTREVISTA.map(function(p){return{txt:p.txt,resp:respuestas[p.id]||''};});
-  upsert({candId:candId,tipo:'ficha_candidato',resps:fichaResps,fecha:hoy()});
+  // Ficha
+  var fich=FICHA.map(function(p){return{txt:p.txt,resp:respuestas[p.id]||''};});
+  upsert({candId:candId,tipo:'ficha_candidato',resps:fich,fecha:hoy()});
 
   localStorage.setItem('rrhh_resultados',JSON.stringify(allRes));
-  // Sincronizar array completo a Firebase
-  try{fbdb.ref('rrhh/resultados').set(allRes).catch(function(err){console.warn('Firebase:',err.message);});}catch(e){}
+  try{fbdb.ref('rrhh/resultados').set(allRes).catch(function(e){console.warn('FB:',e.message);});}catch(e){}
   localStorage.removeItem('rrhh_test_start_'+candId);
 
-  // Mostrar pantalla de fin
+  // Mostrar fin
   document.getElementById('screen-test').style.display='none';
   document.getElementById('nav-footer').style.display='none';
   document.getElementById('stepper').style.display='none';
   document.getElementById('screen-fin').style.display='block';
-  document.getElementById('prog-bar').style.display='none';
-  document.getElementById('header').style.background='#059669';
-  document.getElementById('header-title').textContent='¡Completado!';
+  document.getElementById('global-bar').style.display='none';
+  document.getElementById('topbar').style.background='var(--green)';
+  document.getElementById('topbar-icon').textContent='✅';
+  document.getElementById('topbar-title').textContent='¡Evaluación completada!';
+  document.getElementById('topbar-sub').textContent='';
   document.getElementById('timer').textContent='✓';
+  document.getElementById('global-fill').style.width='100%';
 }
 
-// ── RESETEAR CANDIDATO ────────────────────────
+// ─── RESET ──────────────────────────────────────────
 function resetearCandidato(){
   var id=document.getElementById('sel-reset').value;
   if(!id){alert('Selecciona un candidato');return;}
-  if(!confirm('⚠️ Esto borrará TODOS los datos de este candidato.\n¿Continuar?'))return;
+  if(!confirm('⚠️ Borrar TODOS los datos de este candidato. ¿Continuar?'))return;
   var allRes=JSON.parse(localStorage.getItem('rrhh_resultados')||'[]');
-  allRes=allRes.filter(function(r){return r.candId!==id;});
-  localStorage.setItem('rrhh_resultados',JSON.stringify(allRes));
+  localStorage.setItem('rrhh_resultados',JSON.stringify(allRes.filter(function(r){return r.candId!==id;})));
   localStorage.removeItem('rrhh_test_start_'+id);
-  alert('✓ Datos eliminados. El candidato puede volver a hacer el test.');
-  location.reload();
+  alert('✓ Datos eliminados.');location.reload();
 }
 
-// ── INICIO ───────────────────────────────────
-// Ocultar stepper hasta que inicie
+// ─── INIT ───────────────────────────────────────────
 document.getElementById('stepper').style.display='none';
 cargarConvs();
-llenarSelectorReset();
+llenarReset();
 </script>
 </body>
 </html>

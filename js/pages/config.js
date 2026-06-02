@@ -6,7 +6,8 @@ function pgCfg(){
   document.getElementById('ct').innerHTML=
     '<div class="tabs"><div class="tab on" id="ct0" onclick="swTab(\'c\',0)">Empresa</div>'
     +'<div class="tab" id="ct1" onclick="swTab(\'c\',1)">GitHub Sync</div>'
-    +'<div class="tab" id="ct2" onclick="swTab(\'c\',2)">Backup</div></div>'
+    +'<div class="tab" id="ct2" onclick="swTab(\'c\',2)">Backup</div>'
+    +'<div class="tab" id="ct3" onclick="swTab(\'c\',3)">🗑️ Limpiar Datos</div></div>'
     +'<div id="cp0"><div class="card"><div class="cb">'
     +'<div class="fr fr2"><div class="fg"><label>Empresa</label><input id="cf_emp" value="'+(c.empresa||'')+'"></div>'
     +'<div class="fg"><label>RUC</label><input id="cf_ruc" value="'+(c.ruc||'')+'"></div></div>'
@@ -30,7 +31,34 @@ function pgCfg(){
     +'<p class="tgr tsm mb3">Exporta todos los datos como archivo JSON para respaldo.</p>'
     +'<div class="flex g3"><button class="btn bp" onclick="exportBk()">Descargar Backup</button>'
     +'<button class="btn bo" onclick="importBk()">Restaurar</button>'
-    +'</div></div></div></div>';
+    +'</div></div></div></div>'
+    +'<div id="cp3" class="dn">'
+    +'<div class="al al-w">⚠️ Estas acciones eliminan datos permanentemente. Haz un backup antes si lo necesitas.</div>'
+    // Resultados de tests
+    +'<div class="card mb3"><div class="cb">'
+    +'<h3 style="font-size:14px;font-weight:700;margin-bottom:4px">🧪 Resultados de Tests</h3>'
+    +'<p class="tsm tgr mb3">Borra todos los resultados de evaluaciones (Big5, SCL, Cargo, Ficha). Los candidatos quedarán como si no hubieran hecho el test.</p>'
+    +'<button class="btn br" onclick="limpiarDatos(\'resultados\')">Borrar resultados de tests</button>'
+    +'</div></div>'
+    // Candidatos
+    +'<div class="card mb3"><div class="cb">'
+    +'<h3 style="font-size:14px;font-weight:700;margin-bottom:4px">👤 Candidatos</h3>'
+    +'<p class="tsm tgr mb3">Borra todos los candidatos registrados y sus resultados. Las convocatorias y perfiles se mantienen.</p>'
+    +'<button class="btn br" onclick="limpiarDatos(\'cands\')">Borrar candidatos</button>'
+    +'</div></div>'
+    // Convocatorias
+    +'<div class="card mb3"><div class="cb">'
+    +'<h3 style="font-size:14px;font-weight:700;margin-bottom:4px">📢 Convocatorias</h3>'
+    +'<p class="tsm tgr mb3">Borra todas las convocatorias (y candidatos asociados). Los perfiles de cargo se mantienen.</p>'
+    +'<button class="btn br" onclick="limpiarDatos(\'convs\')">Borrar convocatorias</button>'
+    +'</div></div>'
+    // Reset total
+    +'<div class="card" style="border:2px solid var(--r)"><div class="cb">'
+    +'<h3 style="font-size:14px;font-weight:700;color:var(--r);margin-bottom:4px">☢️ Resetear TODO</h3>'
+    +'<p class="tsm tgr mb3">Borra candidatos, convocatorias, resultados y tests. Solo queda la configuración de empresa y perfiles de cargo.</p>'
+    +'<button class="btn br" onclick="resetTotal()">Resetear todo el sistema</button>'
+    +'</div></div>'
+    +'</div>';
 }
 function saveCfgEmp(){
   var c=getCfg();
@@ -48,4 +76,68 @@ function saveCfgGH(){
   c.repo=document.getElementById('cf_repo').value.trim();
   c.tok=document.getElementById('cf_tok').value.trim();
   saveCfg(c);toast('GitHub guardado','ok');
+}
+
+// ── LIMPIAR DATOS ──────────────────────────────────────
+var LABELS_DATOS={
+  resultados:'resultados de tests',
+  cands:'candidatos',
+  convs:'convocatorias y candidatos'
+};
+function limpiarDatos(tipo){
+  var label=LABELS_DATOS[tipo]||tipo;
+  if(!confirm('¿Borrar TODOS los '+label+'?\n\nEsta acción no se puede deshacer.'))return;
+
+  if(tipo==='resultados'){
+    DB.sResultados([]);
+    // Borrar también de Firebase
+    if(fbdb){try{fbdb.ref('rrhh/resultados').set([]);}catch(e){}}
+    // Borrar timestamps de test del candidato en localStorage
+    Object.keys(localStorage).forEach(function(k){
+      if(k.startsWith('rrhh_test_start_'))localStorage.removeItem(k);
+    });
+    toast('Resultados de tests borrados','ok');
+
+  } else if(tipo==='cands'){
+    DB.sCands([]);
+    DB.sResultados([]);
+    if(fbdb){try{fbdb.ref('rrhh/cands').set([]);fbdb.ref('rrhh/resultados').set([]);}catch(e){}}
+    Object.keys(localStorage).forEach(function(k){
+      if(k.startsWith('rrhh_test_start_'))localStorage.removeItem(k);
+    });
+    toast('Candidatos y resultados borrados','ok');
+
+  } else if(tipo==='convs'){
+    DB.sConvs([]);
+    DB.sCands([]);
+    DB.sResultados([]);
+    if(fbdb){try{fbdb.ref('rrhh/convs').set([]);fbdb.ref('rrhh/cands').set([]);fbdb.ref('rrhh/resultados').set([]);}catch(e){}}
+    Object.keys(localStorage).forEach(function(k){
+      if(k.startsWith('rrhh_test_start_'))localStorage.removeItem(k);
+    });
+    toast('Convocatorias, candidatos y resultados borrados','ok');
+  }
+
+  go('cfg');
+}
+
+function resetTotal(){
+  if(!confirm('¿Resetear TODO el sistema?\n\nSe borrarán:\n• Convocatorias\n• Candidatos\n• Resultados de tests\n• Tests de cargo personalizados\n\nSe conservan: Empresa, Perfiles de cargo.\n\nEsta acción NO se puede deshacer.'))return;
+  DB.sConvs([]);
+  DB.sCands([]);
+  DB.sResultados([]);
+  DB.sTests([]);
+  if(fbdb){
+    try{
+      fbdb.ref('rrhh/convs').set([]);
+      fbdb.ref('rrhh/cands').set([]);
+      fbdb.ref('rrhh/resultados').set([]);
+      fbdb.ref('rrhh/tests').set([]);
+    }catch(e){}
+  }
+  Object.keys(localStorage).forEach(function(k){
+    if(k.startsWith('rrhh_test_start_'))localStorage.removeItem(k);
+  });
+  toast('Sistema reseteado correctamente','ok');
+  go('home');
 }

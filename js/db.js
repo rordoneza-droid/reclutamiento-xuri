@@ -84,19 +84,17 @@ function pullGH(){
   });
   return Promise.all(ps).then(function(rs){setSS(rs.some(Boolean)?'ok':'off');return rs.some(Boolean);});
 }
-function pullGHForms(){
+function pullGHResultados(){
   var c=getCfg();if(!c.tok||!c.own||!c.repo)return;
-  ['forms','resultados'].forEach(function(t){
-    fetch(ghUrl(t),{headers:ghH()}).then(function(r){
-      if(r.ok)return r.json().then(function(j){
-        _shas[t]=j.sha;
-        var raw=decodeURIComponent(escape(atob(j.content.replace(/\n/g,''))));
-        var d=JSON.parse(raw);
-        localStorage.setItem('rrhh_'+t,JSON.stringify(d));DB._c[t]=d;
-      });
-      else if(r.status===404)pushGH(t);
-    }).catch(function(){});
-  });
+  fetch(ghUrl('resultados'),{headers:ghH()}).then(function(r){
+    if(r.ok)return r.json().then(function(j){
+      _shas['resultados']=j.sha;
+      var raw=decodeURIComponent(escape(atob(j.content.replace(/\n/g,''))));
+      var d=JSON.parse(raw);
+      localStorage.setItem('rrhh_resultados',JSON.stringify(d));DB._c['resultados']=d;
+    });
+    else if(r.status===404)pushGH('resultados');
+  }).catch(function(){});
 }
 function syncNow(){
   pullGH().then(function(ok){

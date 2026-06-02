@@ -27,8 +27,8 @@ function pgSelec(){
     }).join('');
     body='<div class="flex g2 mb3" style="flex-wrap:wrap">'
       +'<button class="btn bp bxs" onclick="pasarEntrev(\''+selC+'\')">→ Pasar a Entrevistas</button>'
-      +'<button class="btn bg bxs" onclick="abrirTestCandidato()">📋 Abrir Evaluación Digital</button></div>'
-      +'<div class="al al-s" style="margin-bottom:12px">Haz clic en "Abrir Evaluación Digital" para que el candidato complete los tests. Tiempo límite: 60 minutos.</div>'
+      +'<button class="btn bg bxs" onclick="window.open(\'test.html\',\'_blank\')">📋 Abrir Evaluación Digital</button></div>'
+      +'<div class="al al-s" style="margin-bottom:12px">Haz clic en "Abrir Evaluación Digital" para que el candidato complete los tests en la página del candidato. Tiempo límite: 60 minutos.</div>'
       +'<div class="card"><div class="tw"><table><thead><tr><th>Candidato</th><th>Presel.</th><th>Pruebas</th><th>Promedio</th><th>Etapa</th><th>Acciones</th></tr></thead>'
       +'<tbody>'+(rows||'<tr><td colspan="6" class="tgr" style="text-align:center;padding:20px">Sin candidatos</td></tr>')+'</tbody></table></div></div>';
   }

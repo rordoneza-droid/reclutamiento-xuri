@@ -1,0 +1,59 @@
+/* ══════════════════════════════════════════════════════
+   BASE.CSS — Variables, reset y utilidades globales
+   ══════════════════════════════════════════════════════ */
+
+/* ── RESET ───────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+
+/* ── VARIABLES ───────────────────────────────────────── */
+:root{
+  --p:#2563eb;--pd:#1e40af;--pl:#eff6ff;
+  --g:#059669;--w:#d97706;--r:#dc2626;
+  --g50:#f8fafc;--g100:#f1f5f9;--g200:#e2e8f0;
+  --g300:#cbd5e1;--g400:#94a3b8;--g500:#64748b;
+  --g600:#475569;--g700:#334155;--g800:#1e293b;--g900:#0f172a;
+  --radius:8px;
+  --shadow:0 1px 3px rgba(0,0,0,.1);
+}
+
+/* ── TIPOGRAFÍA BASE ─────────────────────────────────── */
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:var(--g50);color:var(--g800);font-size:14px;line-height:1.5;
+}
+
+/* ── UTILIDADES DE DISPLAY ──────────────────────────── */
+.dn{display:none!important}
+.flex{display:flex}
+.ic{align-items:center}
+.jb{justify-content:space-between}
+
+/* ── ESPACIADO ───────────────────────────────────────── */
+.g2{gap:8px}
+.g3{gap:12px}
+.mt2{margin-top:8px}
+.mt3{margin-top:12px}
+.mt4{margin-top:16px}
+.mb2{margin-bottom:8px}
+.mb3{margin-bottom:12px}
+
+/* ── TIPOGRAFÍA UTILITARIA ───────────────────────────── */
+.tsm{font-size:12px}
+.txs{font-size:11px}
+.tgr{color:var(--g500)}
+.tbold{font-weight:700}
+
+/* ── DIVISOR ─────────────────────────────────────────── */
+.div{border:none;border-top:1px solid var(--g200);margin:12px 0}
+
+/* ── RESPONSIVE ─────────────────────────────────────── */
+@media(max-width:768px){
+  #ct{padding:14px}
+  .fr2,.fr3{grid-template-columns:1fr}
+}
+
+/* ── PRINT ───────────────────────────────────────────── */
+@media print{
+  #sb,#tb,#tw,.no-print{display:none!important}
+  body{background:#fff}
+}

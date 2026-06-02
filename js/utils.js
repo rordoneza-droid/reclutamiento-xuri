@@ -52,7 +52,7 @@ function closeMO(e){if(e.target===document.getElementById('mo'))closeM();}
 var curPage='home';
 var TITLES={home:'Dashboard',cfg:'Empresa y GitHub',perfiles:'Perfiles de Cargo',
   convs:'Convocatorias',cands:'Candidatos',presel:'Preseleccion',
-  selec:'Seleccion',entrev:'Entrevistas',informe:'Informe Final'};
+  selec:'Seleccion',entrev:'Entrevistas',tests:'Tests de Cargo',informe:'Informe Final'};
 
 function go(page){
   curPage=page;
@@ -60,7 +60,7 @@ function go(page){
   document.getElementById('pt').textContent=TITLES[page]||page;
   document.getElementById('tb-act').innerHTML='';
   var fns={home:pgHome,cfg:pgCfg,perfiles:pgPerfiles,convs:pgConvs,
-    cands:pgCands,presel:pgPresel,selec:pgSelec,entrev:pgEntrev,informe:pgInforme};
+    cands:pgCands,presel:pgPresel,selec:pgSelec,entrev:pgEntrev,tests:pgTests,informe:pgInforme};
   if(fns[page]){
     try{fns[page]();}
     catch(err){document.getElementById('ct').innerHTML='<div style="padding:20px;color:red"><b>Error en '+page+':</b> '+err.message+'<br><small>'+err.stack+'</small></div>';}

@@ -334,7 +334,7 @@ select:disabled{background:var(--g50);color:var(--g400)}
       </div>
       <div class="step-row">
         <div class="step-ico" style="background:#ecfdf5">📚</div>
-        <div class="step-info"><strong>Conocimientos del Cargo</strong><span>12 preguntas · Opción múltiple</span></div>
+        <div class="step-info"><strong>Conocimientos del Cargo</strong><span id="cargo-info">General · 12 preguntas · Opción múltiple</span></div>
       </div>
       <div class="step-row">
         <div class="step-ico" style="background:#f5f3ff">👤</div>
@@ -562,6 +562,45 @@ function llenarReset(){
     });
   }catch(e){}
 }
+// Guardar copia de las preguntas de cargo por defecto
+var CARGO_DEFAULT = CARGO.map(function(p){ return p; });
+
+// Carga el test personalizado del perfil asociado a la convocatoria
+function cargarTestCargo(convId) {
+  try {
+    var convs = JSON.parse(localStorage.getItem('rrhh_convs') || '[]');
+    var conv  = convs.find(function(c){ return c.id === convId; });
+    if (!conv) { resetCargoDefault(); return; }
+
+    var tests = JSON.parse(localStorage.getItem('rrhh_tests') || '[]');
+    // Buscar test asociado al perfil de esa convocatoria (el más reciente si hay varios)
+    var test  = tests.filter(function(t){ return t.perfilId === conv.perfilId && t.preguntas && t.preguntas.length; })
+                     .sort(function(a,b){ return (b.upd||'') > (a.upd||'') ? 1 : -1; })[0];
+
+    if (test) {
+      PASOS[2].pregs = test.preguntas.map(function(p, i){
+        return { id:'ct'+i, txt:p.txt, opts:p.opts, correcta:p.correcta };
+      });
+      PASOS[2].desc      = 'Test: ' + test.nombre;
+      PASOS[2].testNombre = test.nombre;
+      // Actualizar info en la pantalla de inicio
+      var infoEl = document.getElementById('cargo-info');
+      if (infoEl) infoEl.textContent = test.nombre + ' · ' + test.preguntas.length + ' preguntas';
+    } else {
+      resetCargoDefault();
+    }
+  } catch(e) {
+    resetCargoDefault();
+  }
+}
+function resetCargoDefault() {
+  PASOS[2].pregs      = CARGO_DEFAULT.map(function(p){ return p; });
+  PASOS[2].desc       = 'Test de Conocimientos del Cargo';
+  PASOS[2].testNombre = '';
+  var infoEl = document.getElementById('cargo-info');
+  if (infoEl) infoEl.textContent = 'General · ' + CARGO_DEFAULT.length + ' preguntas';
+}
+
 document.getElementById('sel-conv').addEventListener('change',function(){
   convId=this.value;
   var s=document.getElementById('sel-cand');
@@ -576,6 +615,9 @@ document.getElementById('sel-conv').addEventListener('change',function(){
           o.textContent=c.apellidos+', '+c.nombres;s.appendChild(o);
         });
     }catch(e){}
+    cargarTestCargo(convId); // ← cargar test personalizado
+  } else {
+    resetCargoDefault();
   }
   actualizarBoton();
 });

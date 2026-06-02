@@ -11,11 +11,13 @@ var DB={
   cands:function(){return this.get('cands');},
   forms:function(){return this.get('forms');},
   resultados:function(){return this.get('resultados');},
+  tests:function(){return this.get('tests');},
   sPerfiles:function(d){this.save('perfiles',d);},
   sConvs:function(d){this.save('convs',d);},
   sCands:function(d){this.save('cands',d);},
   sForms:function(d){this.save('forms',d);},
-  sResultados:function(d){this.save('resultados',d);}
+  sResultados:function(d){this.save('resultados',d);},
+  sTests:function(d){this.save('tests',d);}
 };
 
 // ── FIREBASE SYNC ───────────────────────────────────
@@ -139,4 +141,5 @@ function importBk(){
 (function(){
   if(!localStorage.getItem('rrhh_forms'))localStorage.setItem('rrhh_forms','[]');
   if(!localStorage.getItem('rrhh_resultados'))localStorage.setItem('rrhh_resultados','[]');
+  if(!localStorage.getItem('rrhh_tests'))localStorage.setItem('rrhh_tests','[]');
 })();

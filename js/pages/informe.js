@@ -161,7 +161,8 @@ function pgInforme() {
       + '<div class="sc"><div class="sl">Candidatos</div><div class="sv">' + candsPorConv.length + '</div></div>'
       + '<div class="sc gn"><div class="sl">Con tests</div><div class="sv">' + conDatos.length + '</div></div>'
       + '<div class="sc ' + (sinDatos.length ? 'rd' : 'gn') + '"><div class="sl">Sin datos</div><div class="sv">' + sinDatos.length + '</div></div>'
-      + '</div>';
+      + '</div>'
+      + htmlResumenContratacion(conDatos, vacantes);
 
     // ── GANADORES ──────────────────────────────────
     html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:20px 0 12px">'
@@ -307,6 +308,10 @@ function tarjetaCandidato(g, puesto, tipo) {
     + '</div>'
 
     + '</div>' // grid tests
+
+    // Opinión y recomendación
+    + htmlOpinion(g)
+
     + '</div></div>'; // cb + card
 }
 
@@ -457,8 +462,39 @@ function generarPDF() {
     + '<table><thead><tr><th>#</th><th>Candidato</th><th style="text-align:center">Big5</th><th style="text-align:center">SCL</th><th style="text-align:center">Cargo</th><th style="text-align:center">Entrev.</th><th style="text-align:center">Total</th><th style="text-align:center">Decisión</th></tr></thead>'
     + '<tbody>' + rankRows + '</tbody></table>'
 
+    // ANÁLISIS Y RECOMENDACIÓN DEL GANADOR
+    + '<div class="sec">4. Análisis del candidato recomendado</div>'
+    + (function(){
+        var dec = decisionFinal(ganador);
+        var b5a = analizarBig5(ganador.big5Dims, ganador.big5Score);
+        var sca = analizarSCL(ganador.sclScore, ganador.sclFlags);
+        var cga = analizarCargo(ganador.cargoScore, ganador.cargoCorr, ganador.cargoTotal);
+        function filaA(icono, label, an) {
+          if (!an) return '';
+          var nColor = { alto:'#059669', medio:'#d97706', bajo:'#dc2626' }[an.nivel] || '#64748b';
+          var nLabel = { alto:'Favorable', medio:'Regular', bajo:'Desfavorable' }[an.nivel] || '';
+          return '<tr><td style="padding:8px 10px;font-weight:600;background:#f8fafc;width:30%">' + icono + ' ' + label + '</td>'
+            + '<td style="padding:8px 10px;color:' + nColor + ';font-weight:700">' + nLabel + ' · ' + (an.score != null ? an.score + '%' : '—') + '</td>'
+            + '<td style="padding:8px 10px;font-size:11px;color:#475569">' + an.texto + '</td></tr>'
+            + (an.alerta ? '<tr><td colspan="3" style="padding:6px 10px;background:#fff7ed;color:#c2410c;font-size:11px;font-weight:600">' + an.alerta + '</td></tr>' : '');
+        }
+        return '<div style="background:' + dec.bg + ';border:2px solid ' + dec.color + ';border-radius:8px;padding:14px;margin-bottom:14px">'
+          + '<div style="font-weight:900;color:' + dec.color + ';font-size:14px;margin-bottom:6px">' + dec.icono + ' ' + dec.titulo + ': ' + ganador.nombre + '</div>'
+          + '<p style="font-size:12px;color:#475569;line-height:1.6;margin-bottom:10px">' + dec.texto + '</p>'
+          + '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+          + '<thead><tr><th style="background:#f1f5f9;padding:6px 10px;text-align:left">Evaluación</th>'
+          + '<th style="background:#f1f5f9;padding:6px 10px;text-align:left">Resultado</th>'
+          + '<th style="background:#f1f5f9;padding:6px 10px;text-align:left">Opinión</th></tr></thead>'
+          + '<tbody>'
+          + filaA('🧠','Big Five',b5a)
+          + filaA('💭','SCL',sca)
+          + filaA('📚','Cargo',cga)
+          + '</tbody></table>'
+          + '</div>';
+      })()
+
     // FIRMAS
-    + '<div class="sec" style="margin-top:24px">4. Firmas y conformidad</div>'
+    + '<div class="sec" style="margin-top:24px">5. Firmas y conformidad</div>'
     + '<div class="firmas">'
     + '<div class="firma-box"><div class="firma-line"></div><div class="firma-nombre">' + (cfg.dirRRHH || '______________________________') + '</div><div class="firma-rol">Director de RRHH</div></div>'
     + '<div class="firma-box"><div class="firma-line"></div><div class="firma-nombre">' + (cfg.repLegal || '______________________________') + '</div><div class="firma-rol">Representante Legal</div></div>'

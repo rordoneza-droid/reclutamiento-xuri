@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title>Evaluación de Candidato</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--p:#2563eb;--pd:#1e40af;--g:#059669;--r:#dc2626;--w:#d97706;
+  --g50:#f8fafc;--g100:#f1f5f9;--g200:#e2e8f0;--g300:#cbd5e1;--g400:#94a3b8;--g500:#64748b;--g700:#334155;--g800:#1e293b}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4ff;color:var(--g800);font-size:15px;min-height:100vh}
+
+/* ── HEADER ─────────────────── */
+#header{position:fixed;top:0;left:0;right:0;background:var(--p);color:#fff;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:54px;
+  box-shadow:0 2px 8px rgba(0,0,0,.2)}
+#header-title{font-size:14px;font-weight:700;flex:1}
+#timer{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;
+  background:rgba(255,255,255,.15);padding:4px 12px;border-radius:20px}
+#timer.warn{background:#d97706}
+#timer.danger{background:#dc2626;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+
+/* ── BARRA PROGRESO TOP ──────── */
+#prog-bar{position:fixed;top:54px;left:0;right:0;height:4px;background:rgba(255,255,255,.3);z-index:99}
+#prog-fill{height:100%;background:#fff;transition:width .3s ease}
+
+/* ── STEPPER ────────────────── */
+#stepper{position:fixed;top:58px;left:0;right:0;background:#fff;border-bottom:1px solid var(--g200);
+  z-index:98;padding:0 8px;display:flex;overflow-x:auto;gap:0}
+.step-item{display:flex;align-items:center;gap:6px;padding:10px 12px;cursor:pointer;
+  border-bottom:3px solid transparent;white-space:nowrap;flex-shrink:0;transition:.15s;
+  font-size:12px;color:var(--g400)}
+.step-item.done{color:var(--g)}
+.step-item.active{color:var(--p);border-bottom-color:var(--p);font-weight:700}
+.step-num{width:22px;height:22px;border-radius:50%;border:2px solid currentColor;
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
+.step-item.done .step-num{background:var(--g);border-color:var(--g);color:#fff}
+.step-item.active .step-num{background:var(--p);border-color:var(--p);color:#fff}
+
+/* ── CONTENIDO ──────────────── */
+#wrap{padding:130px 16px 100px;max-width:680px;margin:0 auto}
+
+/* ── PANTALLA INICIO ─────────── */
+#screen-inicio{display:block}
+.logo{font-size:48px;margin-bottom:12px}
+#screen-inicio h1{font-size:22px;font-weight:700;color:var(--pd);margin-bottom:6px}
+#screen-inicio p{color:var(--g500);font-size:14px;margin-bottom:20px;line-height:1.5}
+.sel-wrap{background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:14px}
+.sel-wrap label{display:block;font-size:12px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+select{width:100%;padding:10px 14px;border:2px solid var(--g200);border-radius:8px;font-size:15px;color:var(--g800);background:#fff;outline:none}
+select:focus{border-color:var(--p)}
+.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:13px;color:#1e40af;line-height:1.6}
+.info-box strong{display:block;margin-bottom:4px}
+.btn-start{width:100%;padding:16px;background:var(--p);color:#fff;border:none;border-radius:10px;font-size:17px;font-weight:700;cursor:pointer;transition:.15s}
+.btn-start:hover{background:var(--pd)}
+.btn-start:disabled{background:var(--g300);cursor:not-allowed}
+
+/* ── STEP HEADER ─────────────── */
+.step-header{background:#fff;border-radius:12px;padding:16px 20px;margin-bottom:16px;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);border-left:4px solid var(--p)}
+.step-header h2{font-size:18px;font-weight:700;color:var(--g800);margin-bottom:4px}
+.step-header p{font-size:13px;color:var(--g500)}
+.step-header .step-meta{display:flex;gap:10px;margin-top:8px;font-size:12px}
+.step-tag{background:var(--g100);color:var(--g600);padding:3px 10px;border-radius:20px;font-weight:600}
+
+/* ── PREGUNTAS ───────────────── */
+.bloque{background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:12px}
+.preg-num{font-size:11px;color:var(--g400);margin-bottom:4px;font-weight:600}
+.preg-txt{font-size:14px;font-weight:500;color:var(--g800);margin-bottom:14px;line-height:1.5}
+
+/* Escala */
+.escala-wrap{display:flex;flex-direction:column;gap:6px}
+.escala-pts{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.pt{width:40px;height:40px;border-radius:50%;border:2px solid var(--g200);background:#fff;
+  font-size:14px;font-weight:700;color:var(--g400);cursor:pointer;transition:.15s;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pt:hover{border-color:var(--p);color:var(--p);background:#eff6ff}
+.pt.sel{border-color:var(--p);background:var(--p);color:#fff;transform:scale(1.12);box-shadow:0 2px 8px rgba(37,99,235,.3)}
+.escala-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--g400);padding:0 2px}
+
+/* Opciones múltiple */
+.opciones{display:flex;flex-direction:column;gap:8px}
+.opcion{display:flex;align-items:center;gap:10px;padding:10px 14px;border:2px solid var(--g200);border-radius:8px;cursor:pointer;transition:.15s;font-size:14px}
+.opcion:hover{border-color:var(--p);background:#eff6ff}
+.opcion.sel{border-color:var(--p);background:#eff6ff}
+.opcion-letra{width:24px;height:24px;border-radius:50%;background:var(--g100);color:var(--g500);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.opcion.sel .opcion-letra{background:var(--p);color:#fff}
+
+/* Texto libre */
+.resp-open{width:100%;padding:10px 12px;border:2px solid var(--g200);border-radius:8px;
+  font-size:14px;color:var(--g800);resize:vertical;min-height:80px;outline:none;font-family:inherit}
+.resp-open:focus{border-color:var(--p)}
+
+/* Sin responder */
+.bloque.sin-resp{border:2px solid var(--r)!important;animation:shake .3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* ── FOOTER NAVEGACIÓN ───────── */
+#nav-footer{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--g200);
+  padding:10px 16px;z-index:100;box-shadow:0 -2px 8px rgba(0,0,0,.06)}
+.nav-inner{max-width:680px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.prog-text{font-size:12px;color:var(--g400);white-space:nowrap}
+.btn-nav{padding:11px 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;border:none;transition:.15s}
+.btn-prev{background:var(--g100);color:var(--g700)}
+.btn-prev:hover{background:var(--g200)}
+.btn-next{background:var(--p);color:#fff;flex:1}
+.btn-next:hover{background:var(--pd)}
+.btn-submit{background:var(--g);color:#fff;flex:1}
+.btn-submit:hover{background:#047857}
+
+/* ── PANTALLA FIN ────────────── */
+#screen-fin{display:none;text-align:center;padding:60px 20px}
+#screen-fin .ico{font-size:72px;margin-bottom:20px}
+#screen-fin h2{font-size:24px;font-weight:700;color:var(--g);margin-bottom:10px}
+#screen-fin p{color:var(--g500);font-size:15px;line-height:1.6}
+
+/* ── RESET CANDIDATO ─────────── */
+.reset-panel{background:#fff;border-radius:12px;padding:14px 16px;margin-top:16px;border:1px solid var(--g200)}
+.reset-panel summary{font-weight:600;color:#856404;cursor:pointer;font-size:13px}
+
+@media(max-width:400px){.pt{width:34px;height:34px;font-size:12px}}
+@media print{#header,#prog-bar,#stepper,#nav-footer{display:none}}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <span id="header-title">📋 Evaluación</span>
+  <span id="timer">60:00</span>
+</div>
+<div id="prog-bar"><div id="prog-fill" style="width:0%"></div></div>
+<div id="stepper"></div>
+
+<div id="wrap">
+
+  <!-- PANTALLA INICIO -->
+  <div id="screen-inicio">
+    <div class="logo">📋</div>
+    <h1>Evaluación de Candidato</h1>
+    <p>Selecciona tu nombre y convocatoria antes de comenzar.</p>
+
+    <div class="sel-wrap">
+      <label>Convocatoria</label>
+      <select id="sel-conv"><option value="">— Seleccionar convocatoria —</option></select>
+    </div>
+    <div class="sel-wrap">
+      <label>Tu nombre</label>
+      <select id="sel-cand" disabled><option value="">— Primero selecciona la convocatoria —</option></select>
+    </div>
+
+    <div class="info-box">
+      <strong>📌 Instrucciones importantes</strong>
+      El test está dividido en <strong>4 secciones</strong>. Puedes navegar entre ellas con los botones Anterior / Siguiente.<br>
+      Tienes <strong>60 minutos</strong> en total — el tiempo corre desde que presionas "Comenzar".<br>
+      Responde con sinceridad, no hay respuestas buenas ni malas.<br>
+      Al enviar o al finalizar el tiempo, tus respuestas se guardan automáticamente.
+    </div>
+
+    <button class="btn-start" id="btn-start" onclick="iniciarTest()" disabled>Comenzar evaluación →</button>
+
+    <details class="reset-panel" style="margin-top:16px">
+      <summary>🔄 Resetear candidato (solo para pruebas)</summary>
+      <div style="margin-top:12px">
+        <select id="sel-reset" style="margin-bottom:10px">
+          <option value="">— Selecciona candidato —</option>
+        </select>
+        <button onclick="resetearCandidato()" style="width:100%;padding:10px;background:#dc2626;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600">
+          ⚠️ Borrar datos de este candidato
+        </button>
+      </div>
+    </details>
+  </div>
+
+  <!-- CONTENIDO DEL TEST (generado dinámicamente) -->
+  <div id="screen-test" style="display:none"></div>
+
+  <!-- PANTALLA FIN -->
+  <div id="screen-fin">
+    <div class="ico">✅</div>
+    <h2>¡Evaluación completada!</h2>
+    <p>Tus respuestas han sido guardadas correctamente.<br>Puedes cerrar esta pestaña.</p>
+  </div>
+
+</div>
+
+<!-- FOOTER NAVEGACIÓN (solo durante el test) -->
+<div id="nav-footer" style="display:none">
+  <div class="nav-inner">
+    <button class="btn-nav btn-prev" id="btn-prev" onclick="irPaso(-1)">← Anterior</button>
+    <span class="prog-text" id="prog-text">0 / 0 respondidas</span>
+    <button class="btn-nav btn-next" id="btn-next" onclick="irPaso(1)">Siguiente →</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js"></script>
+<script>
+// ── FIREBASE ───────────────────────────────
+const firebaseConfig={
+  apiKey:"AIzaSyB9bOIeXc1OBYa0Vsst6EDV0TxyPt121XU",
+  authDomain:"rrhh-sistema-87426.firebaseapp.com",
+  databaseURL:"https://rrhh-sistema-87426-default-rtdb.firebaseio.com",
+  projectId:"rrhh-sistema-87426",
+  storageBucket:"rrhh-sistema-87426.firebasestorage.app",
+  messagingSenderId:"432686202734",
+  appId:"1:432686202734:web:21f822d71754688d328b7f"
+};
+const fbApp=firebase.initializeApp(firebaseConfig);
+const fbdb=firebase.database();
+</script>
+<script>
+// ══════════════════════════════════════════════════════
+// DATOS DE TESTS
+// ══════════════════════════════════════════════════════
+var BIG5=[
+  {id:'b1',dim:'E',inv:false,txt:'Me veo como alguien extrovertido/a, entusiasta.'},
+  {id:'b2',dim:'A',inv:true, txt:'Me veo como alguien crítico/a, que suele discutir.'},
+  {id:'b3',dim:'C',inv:false,txt:'Me veo como alguien confiable, autodisciplinado/a.'},
+  {id:'b4',dim:'N',inv:true, txt:'Me veo como alguien relajado/a, que maneja bien el estrés.'},
+  {id:'b5',dim:'O',inv:false,txt:'Me veo como alguien abierto/a a nuevas experiencias, con imaginación.'},
+  {id:'b6',dim:'E',inv:true, txt:'Me veo como alguien reservado/a, tranquilo/a.'},
+  {id:'b7',dim:'A',inv:false,txt:'Me veo como alguien empático/a, afectuoso/a con los demás.'},
+  {id:'b8',dim:'C',inv:true, txt:'Me veo como alguien desorganizado/a, descuidado/a.'},
+  {id:'b9',dim:'N',inv:false,txt:'Me veo como alguien que se asusta fácilmente, ansioso/a.'},
+  {id:'b10',dim:'O',inv:true, txt:'Me veo como alguien que gusta de las rutinas, poco creativo/a.'},
+  {id:'b11',dim:'E',inv:false,txt:'Me veo como alguien que genera entusiasmo en otros.'},
+  {id:'b12',dim:'A',inv:true, txt:'Me veo como alguien que tiende a tener conflictos con otros.'},
+  {id:'b13',dim:'C',inv:false,txt:'Me veo como alguien que hace las cosas con cuidado y atención.'},
+  {id:'b14',dim:'N',inv:true, txt:'Me veo como alguien que la depresión y melancolía le afecta poco.'},
+  {id:'b15',dim:'O',inv:false,txt:'Me veo como alguien con muchos intereses artísticos y culturales.'},
+  {id:'b16',dim:'E',inv:true, txt:'Soy una persona seria y poco comunicativa.'},
+  {id:'b17',dim:'A',inv:false,txt:'Me veo como alguien que ayuda a otros desinteresadamente.'},
+  {id:'b18',dim:'C',inv:true, txt:'A menudo dejo mis tareas sin terminar.'},
+  {id:'b19',dim:'N',inv:false,txt:'Frecuentemente me preocupo por cosas.'},
+  {id:'b20',dim:'O',inv:true, txt:'Prefiero lo tradicional, no cosas nuevas y diferentes.'}
+];
+var SCREENING=[
+  {id:'s1',dim:'SOM',txt:'¿Con qué frecuencia sufres dolores de cabeza?'},
+  {id:'s2',dim:'SOM',txt:'¿Padeces dolor en el cuello o la espalda?'},
+  {id:'s3',dim:'SOM',txt:'¿Tienes molestias estomacales?'},
+  {id:'s4',dim:'SOM',txt:'¿Presentas dificultad para respirar?'},
+  {id:'s5',dim:'ANS',txt:'¿Sientes ansiedad o nerviosismo excesivo?'},
+  {id:'s6',dim:'ANS',txt:'¿Padeces ataques de pánico?'},
+  {id:'s7',dim:'ANS',txt:'¿Tienes problemas para dormir?'},
+  {id:'s8',dim:'DEP',txt:'¿Te sientes triste o deprimido/a frecuentemente?'},
+  {id:'s9',dim:'DEP',txt:'¿Has perdido interés en cosas que antes te gustaban?'},
+  {id:'s10',dim:'DEP',txt:'¿Sientes falta de energía o cansancio excesivo?'},
+  {id:'s11',dim:'HOH',txt:'¿Has tenido pensamiento suicida?'},
+  {id:'s12',dim:'HOH',txt:'¿Te resulta difícil controlar tus emociones?'},
+  {id:'s13',dim:'SOM',txt:'¿Sufres de diarrea o estreñimiento?'},
+  {id:'s14',dim:'ANS',txt:'¿Sientes tensión muscular?'},
+  {id:'s15',dim:'DEP',txt:'¿Sientes culpa frecuentemente?'},
+  {id:'s16',dim:'HOH',txt:'¿Tienes dificultad para concentrarte?'},
+  {id:'s17',dim:'SOM',txt:'¿Has notado cambios en tu apetito?'},
+  {id:'s18',dim:'ANS',txt:'¿Sientes que tu corazón late irregularmente?'},
+  {id:'s19',dim:'DEP',txt:'¿Te cuesta tomar decisiones?'},
+  {id:'s20',dim:'HOH',txt:'¿Eres muy crítico/a contigo mismo/a?'},
+  {id:'s21',dim:'SOM',txt:'¿Tienes mareos o vértigo?'},
+  {id:'s22',dim:'ANS',txt:'¿Sufres de temblores?'},
+  {id:'s23',dim:'DEP',txt:'¿Sientes que la vida no tiene sentido?'},
+  {id:'s24',dim:'HOH',txt:'¿Te cuesta expresar tus emociones?'},
+  {id:'s25',dim:'SOM',txt:'¿Padeces sudoración nocturna?'}
+];
+var CARGO=[
+  {id:'c1',txt:'¿Cuál es el criterio principal al organizar productos en una bodega?',opts:['Por orden de llegada','Por color del empaque','Por tipo, peso y rotación ABC','Aleatoriamente'],correcta:2},
+  {id:'c2',txt:'¿Cómo garantizar estabilidad al apilar cajas?',opts:['Apilar rápido','Acomodar forma cruzada/trabada','Cajas pesadas arriba','Empujar con los pies'],correcta:1},
+  {id:'c3',txt:'¿Cómo distribuir el peso en un palet?',opts:['Concentrar en el centro','Uniforme en toda la superficie','Apilar en un lado','Superar límite 10%'],correcta:1},
+  {id:'c4',txt:'¿Cuál es el EPP obligatorio?',opts:['Ropa cómoda','Casco, guantes, chaleco, zapatos acero','Solo faja lumbar','No se requiere EPP'],correcta:1},
+  {id:'c5',txt:'¿Qué hacer si detectas daños en una estructura?',opts:['Reparar tú mismo','Ignorarlo','Reportar inmediatamente','Esperar inventario'],correcta:2},
+  {id:'c6',txt:'¿Qué hacer ANTES de firmar recepción?',opts:['Guardar inmediatamente','Verificar estado y cantidad','Firmar rápido','Marcar como aprobado'],correcta:1},
+  {id:'c7',txt:'¿Función principal de una picking list?',opts:['Comprobante de pago','Detalle de productos y ubicaciones','Registro de entrada/salida','Mostrar catálogo'],correcta:1},
+  {id:'c8',txt:'¿Qué control antes de despacho?',opts:['Ninguno','Confirmar cantidad y código','Envolver al azar','Cambiar etiquetas'],correcta:1},
+  {id:'c9',txt:'¿Objetivo del etiquetado y códigos?',opts:['Mejora comercial','Decoración','Trazabilidad e identificación','Ocultar defectos'],correcta:2},
+  {id:'c10',txt:'¿Manejo correcto de inventario?',opts:['Dejar cajas abiertas','Registrar inmediatamente','Registrar al final del mes','Colocar devoluciones al azar'],correcta:1},
+  {id:'c11',txt:'Un palet tiene 4 filas de 6 cajas cada una. ¿Total?',opts:['20 cajas','24 cajas','30 cajas','36 cajas'],correcta:1},
+  {id:'c12',txt:'Repuesto 10kg, 3 por caja, ¿peso 2 cajas?',opts:['20 kg','30 kg','60 kg','12 kg'],correcta:2}
+];
+var ENTREVISTA=[
+  {id:'e1',txt:'¿Cuál es tu estado civil?'},
+  {id:'e2',txt:'¿Tienes hijos? Si es así, ¿cuántos y qué edades?'},
+  {id:'e3',txt:'¿Dónde vives? (zona/barrio)'},
+  {id:'e4',txt:'¿Tienes medio de transporte propio?'},
+  {id:'e5',txt:'¿Cuál es tu aspiración salarial?'},
+  {id:'e6',txt:'¿Cuál es tu disponibilidad de horario?'},
+  {id:'e7',txt:'¿Padeces alguna discapacidad o enfermedad catastrófica?'},
+  {id:'e8',txt:'¿Actualmente estudias? ¿Qué carrera/nivel?'},
+  {id:'e9',txt:'¿Cuántos años de experiencia tienes en trabajos similares?'},
+  {id:'e10',txt:'¿Por qué te interesa este puesto?'},
+  {id:'e11',txt:'¿Cuáles son tus fortalezas principales?'},
+  {id:'e12',txt:'¿Cuál es un área en la que te gustaría mejorar?'},
+  {id:'e13',txt:'¿Has trabajado en equipo? Describe una experiencia.'},
+  {id:'e14',txt:'¿Tienes referencias de trabajos anteriores?'}
+];
+
+// ── PASOS DEL WIZARD ────────────────────────
+var PASOS=[
+  {key:'big5',   label:'Personalidad',   icon:'🧠', desc:'Test Big Five',             instruccion:'Indica tu grado de acuerdo con cada afirmación (1=Muy en desacuerdo, 5=Muy de acuerdo).',       escalaMin:'Muy en desacuerdo', escalaMax:'Muy de acuerdo', min:1, max:5, pregs:BIG5,      tipo:'escala'},
+  {key:'scl',    label:'Bienestar',      icon:'💭', desc:'Screening Psicológico',      instruccion:'Indica con qué frecuencia has experimentado cada situación en los últimos 30 días.',             escalaMin:'Nunca',             escalaMax:'Siempre',         min:1, max:5, pregs:SCREENING,  tipo:'escala'},
+  {key:'cargo',  label:'Conocimientos',  icon:'📚', desc:'Test de Cargo',              instruccion:'Selecciona la respuesta correcta para cada pregunta.',                                            escalaMin:'',                  escalaMax:'',                min:0, max:0, pregs:CARGO,      tipo:'opciones'},
+  {key:'ficha',  label:'Datos Personales',icon:'👤', desc:'Ficha del Candidato',       instruccion:'Completa tus datos personales con honestidad.',                                                   escalaMin:'',                  escalaMax:'',                min:0, max:0, pregs:ENTREVISTA, tipo:'texto'}
+];
+
+// ── ESTADO ───────────────────────────────────
+var respuestas={};
+var candId='',convId='',pasoActual=0,timerInt=null,MINS=60;
+
+// ── CARGA INICIAL ─────────────────────────────
+function cargarConvs(){
+  try{
+    var cs=JSON.parse(localStorage.getItem('rrhh_convs')||'[]');
+    var sel=document.getElementById('sel-conv');
+    cs.forEach(function(c){var o=document.createElement('option');o.value=c.id;o.textContent=c.titulo;sel.appendChild(o);});
+  }catch(e){}
+}
+function llenarSelectorReset(){
+  try{
+    var cands=JSON.parse(localStorage.getItem('rrhh_cands')||'[]');
+    var sel=document.getElementById('sel-reset');
+    cands.forEach(function(c){var o=document.createElement('option');o.value=c.id;o.textContent=c.apellidos+', '+c.nombres;sel.appendChild(o);});
+  }catch(e){}
+}
+
+document.getElementById('sel-conv').addEventListener('change',function(){
+  convId=this.value;
+  var s=document.getElementById('sel-cand');
+  s.innerHTML='<option value="">— Seleccionar candidato —</option>';
+  if(!convId){s.disabled=true;actualizarBoton();return;}
+  s.disabled=false;
+  try{
+    var cs=JSON.parse(localStorage.getItem('rrhh_cands')||'[]');
+    cs.filter(function(c){return c.convocatoriaId===convId;}).forEach(function(c){
+      var o=document.createElement('option');o.value=c.id;o.textContent=c.apellidos+', '+c.nombres;s.appendChild(o);
+    });
+  }catch(e){}
+  actualizarBoton();
+});
+document.getElementById('sel-cand').addEventListener('change',function(){
+  candId=this.value;
+  if(timerInt)clearInterval(timerInt);
+  document.getElementById('timer').textContent='60:00';
+  document.getElementById('timer').className='';
+  actualizarBoton();
+});
+function actualizarBoton(){document.getElementById('btn-start').disabled=!candId||!convId;}
+
+// ── STEPPER UI ────────────────────────────────
+function renderStepper(){
+  var html=PASOS.map(function(p,i){
+    var cls=i<pasoActual?'done':i===pasoActual?'active':'';
+    return'<div class="step-item '+cls+'" onclick="irPasoDirecto('+i+')" title="'+p.desc+'">'
+      +'<div class="step-num">'+(i<pasoActual?'✓':(i+1))+'</div>'
+      +'<span>'+p.icon+' '+p.label+'</span>'
+      +'</div>';
+  }).join('');
+  document.getElementById('stepper').innerHTML=html;
+}
+
+// ── RENDERIZAR PASO ACTUAL ─────────────────────
+function renderPaso(){
+  var paso=PASOS[pasoActual];
+  var html='<div class="step-header">'
+    +'<h2>'+paso.icon+' '+paso.desc+'</h2>'
+    +'<p>'+paso.instruccion+'</p>'
+    +'<div class="step-meta"><span class="step-tag">Paso '+(pasoActual+1)+' de '+PASOS.length+'</span>'
+    +'<span class="step-tag">'+paso.pregs.length+' preguntas</span></div>'
+    +'</div>';
+
+  paso.pregs.forEach(function(p,idx){
+    html+='<div class="bloque" id="wrap_'+p.id+'">'
+      +'<div class="preg-num">'+paso.label.toUpperCase()+' — '+(idx+1)+' / '+paso.pregs.length+'</div>'
+      +'<div class="preg-txt">'+p.txt+'</div>';
+
+    if(paso.tipo==='escala'){
+      var cur=respuestas[p.id]||'';
+      html+='<div class="escala-wrap"><div class="escala-pts">';
+      for(var v=paso.min;v<=paso.max;v++){
+        html+='<button class="pt'+(cur==v?' sel':'')+'" id="pt_'+p.id+'_'+v+'" onclick="selPt(\''+p.id+'\','+v+','+paso.min+','+paso.max+')">'+v+'</button>';
+      }
+      html+='</div><div class="escala-lbl"><span>'+paso.escalaMin+'</span><span>'+paso.escalaMax+'</span></div></div>';
+
+    }else if(paso.tipo==='opciones'){
+      var letras=['A','B','C','D'];
+      html+='<div class="opciones">';
+      (p.opts||[]).forEach(function(opt,i){
+        var isSel=respuestas[p.id]===i;
+        html+='<div class="opcion'+(isSel?' sel':'')+'" id="op_'+p.id+'_'+i+'" onclick="selOp(\''+p.id+'\','+i+')">'
+          +'<div class="opcion-letra">'+letras[i]+'</div>'
+          +'<span>'+opt+'</span>'
+          +'</div>';
+      });
+      html+='</div>';
+
+    }else{
+      var val=respuestas[p.id]||'';
+      html+='<textarea class="resp-open" id="resp_'+p.id+'" placeholder="Escribe tu respuesta..." oninput="responder(\''+p.id+'\',this.value)">'+val+'</textarea>';
+    }
+    html+='</div>';
+  });
+
+  document.getElementById('screen-test').innerHTML=html;
+  actualizarProgreso();
+  actualizarNavFooter();
+  window.scrollTo(0,0);
+}
+
+// ── RESPONDER ─────────────────────────────────
+function selPt(pid,val,min,max){
+  respuestas[pid]=val;
+  for(var v=min;v<=max;v++){var el=document.getElementById('pt_'+pid+'_'+v);if(el)el.classList.toggle('sel',v===val);}
+  var wrap=document.getElementById('wrap_'+pid);if(wrap)wrap.classList.remove('sin-resp');
+  actualizarProgreso();
+}
+function selOp(pid,idx){
+  respuestas[pid]=idx;
+  var paso=PASOS[pasoActual];
+  (paso.pregs.find(function(p){return p.id===pid;})||{opts:[]}).opts.forEach(function(_,i){
+    var el=document.getElementById('op_'+pid+'_'+i);if(el)el.classList.toggle('sel',i===idx);
+  });
+  var wrap=document.getElementById('wrap_'+pid);if(wrap)wrap.classList.remove('sin-resp');
+  actualizarProgreso();
+}
+function responder(pid,val){
+  respuestas[pid]=val;
+  var wrap=document.getElementById('wrap_'+pid);if(wrap)wrap.classList.remove('sin-resp');
+  actualizarProgreso();
+}
+
+// ── PROGRESO ──────────────────────────────────
+function actualizarProgreso(){
+  var paso=PASOS[pasoActual];
+  var resp=paso.pregs.filter(function(p){var v=respuestas[p.id];return v!==''&&v!==null&&v!==undefined;}).length;
+  var total=paso.pregs.length;
+  document.getElementById('prog-text').textContent=resp+' / '+total+' respondidas';
+  // Barra de progreso global
+  var globalResp=0,globalTotal=0;
+  PASOS.forEach(function(ps){
+    globalTotal+=ps.pregs.length;
+    globalResp+=ps.pregs.filter(function(p){var v=respuestas[p.id];return v!==''&&v!==null&&v!==undefined;}).length;
+  });
+  document.getElementById('prog-fill').style.width=Math.round(globalResp/globalTotal*100)+'%';
+}
+function actualizarNavFooter(){
+  var esUltimo=pasoActual===PASOS.length-1;
+  var btnNext=document.getElementById('btn-next');
+  var btnPrev=document.getElementById('btn-prev');
+  btnPrev.style.display=pasoActual===0?'none':'block';
+  if(esUltimo){
+    btnNext.textContent='✓ Enviar respuestas';btnNext.className='btn-nav btn-submit';
+    btnNext.onclick=function(){enviarRespuestas(false);};
+  }else{
+    btnNext.textContent='Siguiente →';btnNext.className='btn-nav btn-next';
+    btnNext.onclick=function(){irPaso(1);};
+  }
+}
+
+// ── NAVEGACIÓN ENTRE PASOS ─────────────────────
+function validarPasoActual(){
+  var paso=PASOS[pasoActual];
+  var sinResp=paso.pregs.filter(function(p){var v=respuestas[p.id];return v===''||v===null||v===undefined;});
+  if(sinResp.length>0){
+    sinResp.forEach(function(p){var wrap=document.getElementById('wrap_'+p.id);if(wrap)wrap.classList.add('sin-resp');});
+    var first=document.getElementById('wrap_'+sinResp[0].id);
+    if(first)first.scrollIntoView({behavior:'smooth',block:'center'});
+    return false;
+  }
+  return true;
+}
+function irPaso(delta){
+  if(delta>0&&!validarPasoActual())return;
+  pasoActual=Math.max(0,Math.min(PASOS.length-1,pasoActual+delta));
+  renderStepper();renderPaso();
+}
+function irPasoDirecto(idx){
+  // Solo permitir ir a pasos ya visitados (anteriores al actual)
+  if(idx>=pasoActual)return;
+  pasoActual=idx;renderStepper();renderPaso();
+}
+
+// ── INICIAR TEST ──────────────────────────────
+function iniciarTest(){
+  if(!candId||!convId)return;
+  pasoActual=0;
+  document.getElementById('screen-inicio').style.display='none';
+  document.getElementById('screen-test').style.display='block';
+  document.getElementById('nav-footer').style.display='block';
+  document.getElementById('stepper').style.display='flex';
+  renderStepper();renderPaso();
+  startTimer();
+  window.onbeforeunload=function(){return'¿Seguro que quieres salir? Perderás tus respuestas no guardadas.';};
+}
+
+// ── TIMER ─────────────────────────────────────
+function startTimer(){
+  var startKey='rrhh_test_start_'+candId;
+  var saved=localStorage.getItem(startKey);
+  var startAt=saved?parseInt(saved):Date.now();
+  if(!saved)localStorage.setItem(startKey,startAt);
+  function tick(){
+    var elapsed=Math.floor((Date.now()-startAt)/1000);
+    var left=Math.max(0,MINS*60-elapsed);
+    var m=Math.floor(left/60),s=left%60;
+    var t=document.getElementById('timer');
+    t.textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+    t.className=left<=300?'danger':left<=600?'warn':'';
+    if(left===0){clearInterval(timerInt);enviarRespuestas(true);}
+  }
+  tick();timerInt=setInterval(tick,1000);
+}
+
+// ── ENVIAR RESPUESTAS ─────────────────────────
+function enviarRespuestas(auto){
+  if(!auto&&!validarPasoActual())return;
+  clearInterval(timerInt);window.onbeforeunload=null;
+
+  var allRes=[];
+  try{allRes=JSON.parse(localStorage.getItem('rrhh_resultados')||'[]');}catch(e){}
+
+  function upsert(reg){
+    var idx=allRes.findIndex(function(x){return x.candId===reg.candId&&x.tipo===reg.tipo;});
+    if(idx>=0)allRes[idx]=reg;else allRes.push(reg);
+  }
+  function hoy(){return new Date().toISOString().split('T')[0];}
+
+  // ── BIG FIVE ───────────────────────────────
+  var b5resps=BIG5.map(function(p){return{id:p.id,dim:p.dim,val:respuestas[p.id]||3,inv:p.inv||false};});
+  var b5dims={};
+  ['E','A','C','N','O'].forEach(function(d){
+    var items=b5resps.filter(function(r){return r.dim===d;});
+    var sum=items.reduce(function(s,r){return s+(r.inv?(6-r.val):r.val);},0);
+    b5dims[d]=items.length?Math.round(sum/items.length*10)/10:0;
+  });
+  upsert({candId:candId,tipo:'big5',resps:b5resps,dims:b5dims,fecha:hoy()});
+
+  // ── SCL (escala 1-5 → 0-4) ─────────────────
+  var scresps=SCREENING.map(function(p){var rawVal=respuestas[p.id]||1;return{id:p.id,dim:p.dim,val:rawVal-1};});
+  var sclDims={};
+  ['SOM','ANS','DEP','HOH'].forEach(function(d){
+    var items=scresps.filter(function(r){return r.dim===d;});
+    sclDims[d]=items.length?Math.round(items.reduce(function(s,r){return s+r.val;},0)/items.length*10)/10:0;
+  });
+  upsert({candId:candId,tipo:'scl',resps:scresps,dims:sclDims,fecha:hoy()});
+
+  // ── CARGO (puntaje calculado) ───────────────
+  var caresps=CARGO.map(function(p){
+    var sel=respuestas[p.id]!==undefined&&respuestas[p.id]!==''?parseInt(respuestas[p.id]):-1;
+    return{txt:p.txt,resp:sel,correcta:p.correcta};
+  });
+  var correctas=caresps.filter(function(r){return r.resp===r.correcta;}).length;
+  var cargoPuntaje=Math.round(correctas/caresps.length*100);
+  upsert({candId:candId,tipo:'cargo',resps:caresps,puntaje:cargoPuntaje,fecha:hoy()});
+
+  // ── FICHA PERSONAL ─────────────────────────
+  var fichaResps=ENTREVISTA.map(function(p){return{txt:p.txt,resp:respuestas[p.id]||''};});
+  upsert({candId:candId,tipo:'ficha_candidato',resps:fichaResps,fecha:hoy()});
+
+  localStorage.setItem('rrhh_resultados',JSON.stringify(allRes));
+  // Sincronizar array completo a Firebase
+  try{fbdb.ref('rrhh/resultados').set(allRes).catch(function(err){console.warn('Firebase:',err.message);});}catch(e){}
+  localStorage.removeItem('rrhh_test_start_'+candId);
+
+  // Mostrar pantalla de fin
+  document.getElementById('screen-test').style.display='none';
+  document.getElementById('nav-footer').style.display='none';
+  document.getElementById('stepper').style.display='none';
+  document.getElementById('screen-fin').style.display='block';
+  document.getElementById('prog-bar').style.display='none';
+  document.getElementById('header').style.background='#059669';
+  document.getElementById('header-title').textContent='¡Completado!';
+  document.getElementById('timer').textContent='✓';
+}
+
+// ── RESETEAR CANDIDATO ────────────────────────
+function resetearCandidato(){
+  var id=document.getElementById('sel-reset').value;
+  if(!id){alert('Selecciona un candidato');return;}
+  if(!confirm('⚠️ Esto borrará TODOS los datos de este candidato.\n¿Continuar?'))return;
+  var allRes=JSON.parse(localStorage.getItem('rrhh_resultados')||'[]');
+  allRes=allRes.filter(function(r){return r.candId!==id;});
+  localStorage.setItem('rrhh_resultados',JSON.stringify(allRes));
+  localStorage.removeItem('rrhh_test_start_'+id);
+  alert('✓ Datos eliminados. El candidato puede volver a hacer el test.');
+  location.reload();
+}
+
+// ── INICIO ───────────────────────────────────
+// Ocultar stepper hasta que inicie
+document.getElementById('stepper').style.display='none';
+cargarConvs();
+llenarSelectorReset();
+</script>
+</body>
+</html>

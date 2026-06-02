@@ -1,0 +1,227 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1e293b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="RRHH Pro">
+<title>RRHH Pro</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--p:#2563eb;--pd:#1e40af;--pl:#eff6ff;--g:#059669;--w:#d97706;--r:#dc2626;
+--g50:#f8fafc;--g100:#f1f5f9;--g200:#e2e8f0;--g300:#cbd5e1;--g400:#94a3b8;
+--g500:#64748b;--g600:#475569;--g700:#334155;--g800:#1e293b;--g900:#0f172a}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--g50);color:var(--g800);font-size:14px}
+#app{display:flex;min-height:100vh}
+#sb{width:240px;background:var(--g900);color:#fff;display:flex;flex-direction:column;flex-shrink:0;z-index:200;transition:.3s}
+#main{flex:1;display:flex;flex-direction:column;min-height:100vh}
+#tb{background:#fff;border-bottom:1px solid var(--g200);padding:10px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+#ct{flex:1;padding:20px;overflow-y:auto}
+.sb-logo{padding:16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sb-logo h2{font-size:14px;font-weight:700}
+.sb-logo p{font-size:11px;color:var(--g400);margin-top:2px}
+.sb-nav{flex:1;padding:6px 0;overflow-y:auto}
+.ns{padding:12px 16px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--g500)}
+.ni{display:flex;align-items:center;gap:8px;padding:8px 16px;cursor:pointer;color:var(--g400);font-size:13px;transition:.15s;border-left:3px solid transparent}
+.ni:hover{background:rgba(255,255,255,.06);color:#fff}
+.ni.active{background:rgba(37,99,235,.25);color:#fff;border-left-color:var(--p)}
+#tb h1{font-size:15px;font-weight:600;flex:1}
+.bti{background:none;border:none;cursor:pointer;padding:6px;border-radius:6px;color:var(--g500);font-size:18px;line-height:1}
+#mt{display:none}
+#ss{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600}
+.so{background:var(--g100);color:var(--g500)}.si{background:#fef3c7;color:#92400e}
+.sk{background:#d1fae5;color:#065f46}.se{background:#fee2e2;color:#991b1b}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:.15s;white-space:nowrap}
+.bp{background:var(--p);color:#fff}.bp:hover{background:var(--pd)}
+.bg{background:var(--g);color:#fff}
+.br{background:var(--r);color:#fff}
+.bw{background:var(--w);color:#fff}
+.bo{background:#fff;color:var(--g700);border:1px solid var(--g300)}
+.bs{padding:5px 10px;font-size:12px}
+.bxs{padding:3px 8px;font-size:11px}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);border:1px solid var(--g200);margin-bottom:12px}
+.ch{padding:14px 18px;border-bottom:1px solid var(--g100);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.ct2{font-size:14px;font-weight:600}
+.cb{padding:18px}
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.sc{background:#fff;border-radius:12px;padding:14px 18px;border:1px solid var(--g200);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.sc.bl{border-left:4px solid var(--p)}.sc.gn{border-left:4px solid var(--g)}
+.sc.yw{border-left:4px solid var(--w)}.sc.rd{border-left:4px solid var(--r)}
+.sl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--g500);margin-bottom:3px}
+.sv{font-size:24px;font-weight:700;color:var(--g900)}
+.ss2{font-size:11px;color:var(--g500)}
+.fg{margin-bottom:14px}
+.fr{display:grid;gap:12px;margin-bottom:14px}
+.fr2{grid-template-columns:1fr 1fr}
+.fr3{grid-template-columns:1fr 1fr 1fr}
+label{display:block;font-size:11px;font-weight:600;color:var(--g700);margin-bottom:4px}
+.rq{color:var(--r);margin-left:2px}
+input,select,textarea{width:100%;padding:7px 11px;border:1px solid var(--g300);border-radius:6px;font-size:13px;color:var(--g800);background:#fff;transition:.15s;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+textarea{resize:vertical;min-height:70px}
+.hint{font-size:11px;color:var(--g400);margin-top:2px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--g50);padding:9px 13px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--g500);border-bottom:2px solid var(--g200)}
+td{padding:11px 13px;border-bottom:1px solid var(--g100);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--g50)}
+.bdg{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.b-bl{background:#dbeafe;color:#1e40af}.b-gn{background:#d1fae5;color:#065f46}
+.b-yw{background:#fef3c7;color:#92400e}.b-rd{background:#fee2e2;color:#991b1b}
+.b-gr{background:var(--g100);color:var(--g600)}.b-pu{background:#ede9fe;color:#5b21b6}
+.b-cy{background:#cffafe;color:#155e75}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:.2s}
+.mo.open{opacity:1;pointer-events:all}
+.mb{background:#fff;border-radius:12px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.mb.lg{max-width:860px}
+.mh{padding:16px 20px 14px;border-bottom:1px solid var(--g200);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1}
+.mh h3{font-size:15px;font-weight:700}
+.mbody{padding:20px}
+.mf{padding:14px 20px;border-top:1px solid var(--g200);display:flex;justify-content:flex-end;gap:8px;background:var(--g50)}
+.tabs{display:flex;gap:2px;border-bottom:2px solid var(--g200);margin-bottom:16px;overflow-x:auto}
+.tab{padding:8px 14px;font-size:13px;font-weight:500;color:var(--g500);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.tab.on{color:var(--p);border-bottom-color:var(--p);font-weight:600}
+.al{padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:14px}
+.al-i{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
+.al-w{background:#fef3c7;border:1px solid #fcd34d;color:#92400e}
+.al-s{background:#d1fae5;border:1px solid #6ee7b7;color:#065f46}
+.es{text-align:center;padding:50px 20px;color:var(--g400)}
+.es-ico{font-size:44px;margin-bottom:10px}
+.es h3{font-size:15px;font-weight:600;color:var(--g600);margin-bottom:6px}
+.es p{font-size:13px;margin-bottom:14px}
+.cc{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px;border:1px solid var(--g300);border-radius:6px;min-height:38px;cursor:text;transition:.15s}
+.cc:focus-within{border-color:var(--p);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.chip{display:inline-flex;align-items:center;gap:3px;background:var(--pl);color:var(--p);padding:2px 7px;border-radius:20px;font-size:11px;font-weight:500}
+.chip-x{background:none;border:none;cursor:pointer;color:var(--p);font-size:13px;line-height:1;padding:0}
+.ci{border:none;outline:none;font-size:13px;flex:1;min-width:80px;background:none}
+.rw{display:flex;align-items:center;gap:8px}
+.rv{font-size:13px;font-weight:700;color:var(--p);min-width:34px;text-align:right}
+.pb{height:7px;background:var(--g200);border-radius:4px;overflow:hidden}
+.pf{height:100%;border-radius:4px}
+.sem{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0}
+.sg2{color:var(--g)}.sy2{color:var(--w)}.sr2{color:var(--r)}
+#tw{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.tn{background:var(--g800);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;box-shadow:0 4px 6px rgba(0,0,0,.15);animation:sIn .2s ease;max-width:300px}
+.tn-ok{background:var(--g)}.tn-err{background:var(--r)}.tn-w{background:var(--w)}
+@keyframes sIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
+.div{border:none;border-top:1px solid var(--g200);margin:12px 0}
+.dn{display:none!important}
+.flex{display:flex}.ic{align-items:center}.jb{justify-content:space-between}
+.g2{gap:8px}.g3{gap:12px}.mt2{margin-top:8px}.mt3{margin-top:12px}.mt4{margin-top:16px}
+.mb2{margin-bottom:8px}.mb3{margin-bottom:12px}.tsm{font-size:12px}.txs{font-size:11px}
+.tgr{color:var(--g500)}.tbold{font-weight:700}
+.ovl{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:199;display:none}
+.ovl.show{display:block}
+@media(max-width:768px){
+  #sb{position:fixed;left:-240px;top:0;bottom:0}
+  #sb.open{left:0}
+  #mt{display:flex}
+  #ct{padding:14px}
+  .fr2,.fr3{grid-template-columns:1fr}
+}
+@media print{#sb,#tb,#tw,.no-print{display:none!important}body{background:#fff}}
+</style>
+</head>
+<body>
+<div id="tw"></div>
+<div id="ovl" class="ovl" onclick="closeSB()"></div>
+<div id="app">
+<nav id="sb">
+  <div class="sb-logo">
+    <h2 id="sb-emp">&#128101; RRHH Pro</h2>
+    <p id="sb-ruc">Sistema de Selección de Personal</p>
+  </div>
+  <div class="sb-nav">
+    <div class="ns">General</div>
+    <div class="ni active" data-p="home" onclick="go('home')">&#127968; Dashboard</div>
+    <div class="ns">Configuración</div>
+    <div class="ni" data-p="cfg" onclick="go('cfg')">&#9881;&#65039; Empresa y GitHub</div>
+    <div class="ni" data-p="perfiles" onclick="go('perfiles')">&#128203; Perfiles de Cargo</div>
+    <div class="ns">Proceso</div>
+    <div class="ni" data-p="convs" onclick="go('convs')">&#128226; Convocatorias</div>
+    <div class="ni" data-p="cands" onclick="go('cands')">&#128100; Candidatos</div>
+    <div class="ni" data-p="presel" onclick="go('presel')">&#128270; Preselección</div>
+    <div class="ni" data-p="selec" onclick="go('selec')">&#9989; Selección</div>
+    <div class="ni" data-p="entrev" onclick="go('entrev')">&#127908; Entrevistas</div>
+    <div class="ns">Evaluaciones</div>
+    <div class="ni" data-p="forms" onclick="go('forms')">📋 Formularios / Tests</div>
+    <div class="ns">Resultados</div>
+    <div class="ni" data-p="informe" onclick="go('informe')">&#128196; Informe Final</div>
+  </div>
+</nav>
+<div id="main">
+  <div id="tb">
+    <button class="bti" id="mt" onclick="toggleSB()">&#9776;</button>
+    <h1 id="pt">Dashboard</h1>
+    <span id="ss" class="bdg so">&#9679; Local</span>
+    <div class="flex g2" id="tb-act"></div>
+  </div>
+  <div id="ct"><p style="padding:20px;color:#888">Cargando...</p></div>
+</div>
+</div>
+<div id="mo" class="mo" onclick="closeMO(event)">
+  <div class="mb" id="mb" onclick="event.stopPropagation()">
+    <div class="mh"><h3 id="mt2">-</h3><button class="bti" onclick="closeM()">&#10005;</button></div>
+    <div class="mbody" id="mbody"></div>
+    <div class="mf" id="mf"></div>
+  </div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script>
+// ── FIREBASE CONFIG ────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyB9bOIeXc1OBYa0Vsst6EDV0TxyPt121XU",
+  authDomain: "rrhh-sistema-87426.firebaseapp.com",
+  databaseURL: "https://rrhh-sistema-87426-default-rtdb.firebaseio.com",
+  projectId: "rrhh-sistema-87426",
+  storageBucket: "rrhh-sistema-87426.firebasestorage.app",
+  messagingSenderId: "432686202734",
+  appId: "1:432686202734:web:21f822d71754688d328b7f"
+};
+let fbApp, fbdb;
+try{
+  fbApp = firebase.initializeApp(firebaseConfig);
+  fbdb = firebase.database();
+  console.log('✓ Firebase listo');
+}catch(e){
+  console.warn('Firebase init error:', e);
+}
+</script>
+<!-- ── MÓDULOS JS ──────────────────────────── -->
+<script src="js/db.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/data.js"></script>
+<script src="js/pages/home.js"></script>
+<script src="js/pages/config.js"></script>
+<script src="js/pages/perfiles.js"></script>
+<script src="js/pages/convs.js"></script>
+<script src="js/pages/cands.js"></script>
+<script src="js/pages/presel.js"></script>
+<script src="js/pages/selec.js"></script>
+<script src="js/pages/entrev.js"></script>
+<script src="js/pages/forms.js"></script>
+<script src="js/pages/informe.js"></script>
+<script>
+// ── INIT ──────────────────────────────────────
+(function(){
+  updateLogo();
+  loadFromFirebase();
+  var c=getCfg();
+  if(c.tok&&c.own&&c.repo){
+    setSS('ing');
+    var done=false;
+    var timer=setTimeout(function(){if(!done){done=true;setSS('err');}},8000);
+    pullGH().then(function(ok){
+      pullGHForms();
+      if(!done){done=true;clearTimeout(timer);if(ok)go(curPage);}
+    }).catch(function(){
+      if(!done){done=true;clearTimeout(timer);setSS('off');}
+    });
+  }
+})();
+</script>
+</body>
+</html>

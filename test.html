@@ -269,6 +269,17 @@ select:disabled{background:var(--g50);color:var(--g400)}
 }
 .btn-next:hover{filter:brightness(1.1)}
 
+/* ─── SALTAR MÓDULO ─────────────────────────────────── */
+.btn-saltar{
+  padding:10px 14px;background:transparent;color:var(--g500);
+  border:1.5px dashed var(--g300);border-radius:10px;
+  font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
+  transition:.15s;flex-shrink:0;display:none;align-items:center;gap:5px;
+}
+.btn-saltar:hover{background:var(--g100);border-color:var(--g400);color:var(--g700)}
+.stp-dot.existing{border-color:var(--green);color:var(--green)}
+.stp-label.existing{color:var(--green)}
+
 /* ─── PANTALLA FIN ──────────────────────────────────── */
 #screen-fin{display:none;padding:60px 20px;text-align:center}
 .fin-ico{font-size:80px;margin-bottom:20px;animation:pop .5s ease}
@@ -382,6 +393,7 @@ select:disabled{background:var(--g50);color:var(--g400)}
       <div class="prog-label" id="prog-label">0 / 0 respondidas</div>
       <div class="prog-bar-mini"><div class="prog-bar-fill" id="prog-bar-fill" style="width:0%"></div></div>
     </div>
+    <button class="btn-saltar" id="btn-saltar" onclick="saltarModulo()">↷ Saltar</button>
     <button class="btn-next" id="btn-next" onclick="irPaso(1)">Continuar →</button>
   </div>
 </div>
@@ -541,6 +553,7 @@ var PASOS=[
 <!-- ── LÓGICA ── -->
 <script>
 var respuestas={};
+var modulosSaltados={}, modulosExistentes={};
 var candId='',convId='',pasoActual=0,timerInt=null,MINS=60;
 
 // ─── SETUP INICIAL ─────────────────────────────────
@@ -564,6 +577,20 @@ function llenarReset(){
 }
 // Guardar copia de las preguntas de cargo por defecto
 var CARGO_DEFAULT = CARGO.map(function(p){ return p; });
+
+// Detectar qué módulos ya tienen datos guardados para este candidato
+function verificarModulosExistentes(cId){
+  modulosExistentes={};
+  try{
+    var res=JSON.parse(localStorage.getItem('rrhh_resultados')||'[]');
+    res.filter(function(r){return r.candId===cId;}).forEach(function(r){
+      if(r.tipo==='big5')           modulosExistentes[0]=true;
+      if(r.tipo==='scl')            modulosExistentes[1]=true;
+      if(r.tipo==='cargo')          modulosExistentes[2]=true;
+      if(r.tipo==='ficha_candidato')modulosExistentes[3]=true;
+    });
+  }catch(e){}
+}
 
 // Carga el test personalizado del perfil asociado a la convocatoria
 function cargarTestCargo(convId) {
@@ -623,6 +650,9 @@ document.getElementById('sel-conv').addEventListener('change',function(){
 });
 document.getElementById('sel-cand').addEventListener('change',function(){
   candId=this.value;
+  modulosSaltados={};
+  if(candId) verificarModulosExistentes(candId);
+  else modulosExistentes={};
   if(timerInt)clearInterval(timerInt);
   document.getElementById('timer').textContent='60:00';
   document.getElementById('timer').className='';
@@ -637,10 +667,14 @@ function renderStepper(){
   var html='';
   PASOS.forEach(function(p,i){
     var isDone=i<pasoActual, isActive=i===pasoActual;
-    var cls=isDone?'done':isActive?'active':'';
-    if(i>0)html+='<div class="stp-line'+(i<=pasoActual?' done':'')+'"></div>';
-    html+='<div class="stp"><div class="stp-dot '+cls+'">'+(isDone?'✓':(i+1))+'</div>'
-      +'<span class="stp-label '+cls+'">'+p.icon+' '+p.label+'</span></div>';
+    var hasExisting=modulosExistentes[i]&&!isDone&&!isActive;
+    var wasSaltado=modulosSaltados[i];
+    var cls=isDone?(wasSaltado?'':'done'):isActive?'active':hasExisting?'existing':'';
+    var lbl=isDone?(wasSaltado?'existing done':'done'):isActive?'active':hasExisting?'existing':'';
+    var icon=isDone?(wasSaltado?'↷':'✓'):(hasExisting?'✓':(i+1));
+    if(i>0)html+='<div class="stp-line'+(i<=pasoActual&&!wasSaltado?' done':'')+'"></div>';
+    html+='<div class="stp"><div class="stp-dot '+cls+'">'+icon+'</div>'
+      +'<span class="stp-label '+lbl+'">'+p.icon+' '+p.label+'</span></div>';
   });
   document.getElementById('stepper').innerHTML=html;
   // Aplicar color de paso al CSS
@@ -653,10 +687,33 @@ function renderStepper(){
   document.getElementById('topbar-sub').textContent='Sección '+(pasoActual+1)+' de '+PASOS.length;
 }
 
+// ─── SALTAR MÓDULO ─────────────────────────────────
+function saltarModulo(){
+  modulosSaltados[pasoActual]=true;
+  var siguiente=pasoActual+1;
+  if(siguiente>=PASOS.length){
+    // Último módulo saltado → enviar directamente
+    confirmarEnvio();
+  }else{
+    pasoActual=siguiente;
+    renderStepper();renderPaso();
+  }
+}
+
 // ─── RENDER DEL PASO ───────────────────────────────
 function renderPaso(){
   var paso=PASOS[pasoActual];
   var html='';
+
+  // Aviso si ya hay datos guardados para este módulo
+  if(modulosExistentes[pasoActual]){
+    html+='<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;'
+      +'padding:12px 16px;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px">'
+      +'<span style="font-size:20px;flex-shrink:0">✅</span>'
+      +'<div><strong style="font-size:13px;color:#166534">Ya tienes datos guardados en este módulo.</strong>'
+      +'<div style="font-size:12px;color:#15803d;margin-top:3px">Usa <strong>↷ Saltar</strong> para conservar los datos anteriores, '
+      +'o responde las preguntas abajo para actualizarlos.</div></div></div>';
+  }
 
   // Banner de la rama
   html+='<div class="rama-header">'
@@ -721,7 +778,7 @@ function selPt(pid,val,min,max){
   }
   var wrap=document.getElementById('wrap_'+pid);
   if(wrap)wrap.classList.remove('sin-resp');
-  actualizarProgreso();
+  actualizarProgreso();actualizarFooter();
 }
 function selOp(pid,idx){
   respuestas[pid]=idx;
@@ -739,13 +796,13 @@ function selOp(pid,idx){
   }
   var wrap=document.getElementById('wrap_'+pid);
   if(wrap)wrap.classList.remove('sin-resp');
-  actualizarProgreso();
+  actualizarProgreso();actualizarFooter();
 }
 function responder(pid,val){
   respuestas[pid]=val;
   var wrap=document.getElementById('wrap_'+pid);
   if(wrap)wrap.classList.remove('sin-resp');
-  actualizarProgreso();
+  actualizarProgreso();actualizarFooter();
 }
 
 // ─── PROGRESO ──────────────────────────────────────
@@ -768,9 +825,22 @@ function actualizarProgreso(){
 }
 function actualizarFooter(){
   var esUltimo=pasoActual===PASOS.length-1;
+  var paso=PASOS[pasoActual];
   var btnPrev=document.getElementById('btn-prev');
   var btnNext=document.getElementById('btn-next');
+  var btnSaltar=document.getElementById('btn-saltar');
   btnPrev.style.visibility=pasoActual===0?'hidden':'visible';
+
+  // Botón saltar: solo visible si NO hay ninguna pregunta respondida en este paso
+  if(btnSaltar){
+    var respondidas=paso.pregs.filter(function(p){
+      var v=respuestas[p.id];return v!==''&&v!==null&&v!==undefined;
+    }).length;
+    var puedesSaltar=respondidas===0;
+    btnSaltar.style.display=puedesSaltar?'flex':'none';
+    btnSaltar.textContent=esUltimo?'↷ Saltar y Enviar':'↷ Saltar';
+  }
+
   if(esUltimo){
     btnNext.textContent='✓ Enviar todo';
     btnNext.style.background='var(--green)';
@@ -804,6 +874,7 @@ function irPaso(delta){
 function iniciarTest(){
   if(!candId||!convId)return;
   pasoActual=0;
+  modulosSaltados={};
   document.getElementById('screen-inicio').style.display='none';
   document.getElementById('screen-test').style.display='block';
   document.getElementById('nav-footer').style.display='block';
@@ -833,12 +904,16 @@ function startTimer(){
 // ─── CONFIRMAR ENVÍO ────────────────────────────────
 function confirmarEnvio(){
   if(!validar())return;
-  // Contar total sin responder
+  // Contar preguntas sin responder solo en módulos NO saltados
   var totalSin=0;
-  PASOS.forEach(function(p){
+  PASOS.forEach(function(p,i){
+    if(modulosSaltados[i])return;
     p.pregs.forEach(function(q){var v=respuestas[q.id];if(v===''||v===null||v===undefined)totalSin++;});
   });
-  var msg=totalSin>0?'Aún tienes '+totalSin+' preguntas sin responder. ¿Enviar igualmente?':'¿Enviar tus respuestas?';
+  var saltados=Object.keys(modulosSaltados).filter(function(k){return modulosSaltados[k];}).length;
+  var msg='¿Enviar tus respuestas?';
+  if(totalSin>0) msg='Tienes '+totalSin+' preguntas sin responder. ¿Enviar igualmente?';
+  if(saltados>0) msg+=(totalSin>0?'\n':'\n')+'('+saltados+' módulo(s) saltado(s) — se conservan datos anteriores)';
   if(!confirm(msg))return;
   enviarRespuestas(false);
 }
@@ -854,37 +929,45 @@ function enviarRespuestas(auto){
   }
   function hoy(){return new Date().toISOString().split('T')[0];}
 
-  // Big5
-  var b5r=BIG5.map(function(p){return{id:p.id,dim:p.dim,val:respuestas[p.id]||3,inv:p.inv||false};});
-  var b5d={};
-  ['E','A','C','N','O'].forEach(function(d){
-    var items=b5r.filter(function(r){return r.dim===d;});
-    var sum=items.reduce(function(s,r){return s+(r.inv?(6-r.val):r.val);},0);
-    b5d[d]=items.length?Math.round(sum/items.length*10)/10:0;
-  });
-  upsert({candId:candId,tipo:'big5',resps:b5r,dims:b5d,fecha:hoy()});
+  // Big5 (solo si no fue saltado)
+  if(!modulosSaltados[0]){
+    var b5r=BIG5.map(function(p){return{id:p.id,dim:p.dim,val:respuestas[p.id]||3,inv:p.inv||false};});
+    var b5d={};
+    ['E','A','C','N','O'].forEach(function(d){
+      var items=b5r.filter(function(r){return r.dim===d;});
+      var sum=items.reduce(function(s,r){return s+(r.inv?(6-r.val):r.val);},0);
+      b5d[d]=items.length?Math.round(sum/items.length*10)/10:0;
+    });
+    upsert({candId:candId,tipo:'big5',resps:b5r,dims:b5d,fecha:hoy()});
+  }
 
-  // SCL (1-5 → 0-4)
-  var scr=SCL.map(function(p){var v=respuestas[p.id]||1;return{id:p.id,dim:p.dim,val:v-1};});
-  var scd={};
-  ['SOM','ANS','DEP','HOS','PAR','PSI','OBS','SIN'].forEach(function(d){
-    var items=scr.filter(function(r){return r.dim===d;});
-    scd[d]=items.length?Math.round(items.reduce(function(s,r){return s+r.val;},0)/items.length*10)/10:0;
-  });
-  upsert({candId:candId,tipo:'scl',resps:scr,dims:scd,fecha:hoy()});
+  // SCL (1-5 → 0-4, solo si no fue saltado)
+  if(!modulosSaltados[1]){
+    var scr=SCL.map(function(p){var v=respuestas[p.id]||1;return{id:p.id,dim:p.dim,val:v-1};});
+    var scd={};
+    ['SOM','ANS','DEP','HOS','PAR','PSI','OBS','SIN'].forEach(function(d){
+      var items=scr.filter(function(r){return r.dim===d;});
+      scd[d]=items.length?Math.round(items.reduce(function(s,r){return s+r.val;},0)/items.length*10)/10:0;
+    });
+    upsert({candId:candId,tipo:'scl',resps:scr,dims:scd,fecha:hoy()});
+  }
 
-  // Cargo (usar las preguntas activas del paso 2, sean default o personalizadas)
-  var carPregs=PASOS[2].pregs;
-  var car=carPregs.map(function(p){
-    var sel=respuestas[p.id]!==undefined&&respuestas[p.id]!==''?parseInt(respuestas[p.id]):-1;
-    return{txt:p.txt,resp:sel,correcta:p.correcta};
-  });
-  var hits=car.filter(function(r){return r.resp===r.correcta;}).length;
-  upsert({candId:candId,tipo:'cargo',resps:car,puntaje:Math.round(hits/car.length*100),fecha:hoy()});
+  // Cargo (preguntas activas del paso 2, solo si no fue saltado)
+  if(!modulosSaltados[2]){
+    var carPregs=PASOS[2].pregs;
+    var car=carPregs.map(function(p){
+      var sel=respuestas[p.id]!==undefined&&respuestas[p.id]!==''?parseInt(respuestas[p.id]):-1;
+      return{txt:p.txt,resp:sel,correcta:p.correcta};
+    });
+    var hits=car.filter(function(r){return r.resp===r.correcta;}).length;
+    upsert({candId:candId,tipo:'cargo',resps:car,puntaje:Math.round(hits/car.length*100),fecha:hoy()});
+  }
 
-  // Ficha
-  var fich=FICHA.map(function(p){return{txt:p.txt,resp:respuestas[p.id]||''};});
-  upsert({candId:candId,tipo:'ficha_candidato',resps:fich,fecha:hoy()});
+  // Ficha (solo si no fue saltada)
+  if(!modulosSaltados[3]){
+    var fich=FICHA.map(function(p){return{txt:p.txt,resp:respuestas[p.id]||''};});
+    upsert({candId:candId,tipo:'ficha_candidato',resps:fich,fecha:hoy()});
+  }
 
   localStorage.setItem('rrhh_resultados',JSON.stringify(allRes));
   try{fbdb.ref('rrhh/resultados').set(allRes).catch(function(e){console.warn('FB:',e.message);});}catch(e){}

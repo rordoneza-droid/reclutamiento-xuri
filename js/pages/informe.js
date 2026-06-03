@@ -9,10 +9,9 @@ function calcScore(candId) {
   var resultados = DB.resultados();
   var res = resultados.filter(function(r) { return r.candId === candId; });
 
-  var big5      = res.find(function(r) { return r.tipo === 'big5'; });
-  var scl       = res.find(function(r) { return r.tipo === 'scl' || r.tipo === 'screening'; });
-  var cargo     = res.find(function(r) { return r.tipo === 'cargo'; });
-  var entrevista= res.find(function(r) { return r.tipo === 'entrevista'; });
+  var big5  = res.find(function(r) { return r.tipo === 'big5'; });
+  var scl   = res.find(function(r) { return r.tipo === 'scl' || r.tipo === 'screening'; });
+  var cargo = res.find(function(r) { return r.tipo === 'cargo'; });
 
   // ── Big5: dims {E,A,C,N,O} escala 1-5 → 0-100 (N invertido)
   var big5Score = null;
@@ -81,13 +80,18 @@ function calcScore(candId) {
     }
   }
 
-  // ── Entrevista HR
+  // ── Entrevista HR (guardada en el candidato, no en resultados)
   var entScore = null;
   var entRec   = null;
-  if (entrevista) {
-    entRec = entrevista.recomendacion || 'pendiente';
+  var cand = DB.cands().find(function(c) { return c.id === candId; });
+  if (cand && cand.entrevistas && cand.entrevistas.length) {
+    entScore = cand.puntajeEntrevista != null
+      ? cand.puntajeEntrevista
+      : Math.round(cand.entrevistas.reduce(function(s, e) { return s + e.puntaje; }, 0) / cand.entrevistas.length);
+    var lastEnt = cand.entrevistas[cand.entrevistas.length - 1];
+    entRec = lastEnt.rec || 'pendiente';
     var rm = { recomendar: 90, reserva: 65, 'no recomendar': 25, pendiente: 70 };
-    entScore = rm[entRec] != null ? rm[entRec] : 70;
+    entScore = rm[entRec] != null ? rm[entRec] : entScore;
   }
 
   // ── Puntaje total (promedio de tests disponibles)
@@ -105,7 +109,7 @@ function calcScore(candId) {
     hasBig5: !!big5,   big5Score: big5Score,   big5Dims: big5Dims,
     hasScl:  !!scl,    sclScore:  sclScore,    sclFlags: sclFlags,
     hasCargo:!!cargo,  cargoScore:cargoScore,  cargoCorr:cargoCorr, cargoTotal:cargoTotal,
-    hasEnt:  !!entrevista, entScore: entScore, entRec: entRec,
+    hasEnt:  entScore != null, entScore: entScore, entRec: entRec,
     score: score, completo: completo, testsCount: ptos.length
   };
 }

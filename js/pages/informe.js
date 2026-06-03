@@ -81,8 +81,9 @@ function calcScore(candId) {
   }
 
   // ── Entrevista HR (guardada en el candidato, no en resultados)
-  var entScore = null;
-  var entRec   = null;
+  var entScore    = null;
+  var entRec      = null;
+  var entIsSystem = false;
   var cand = DB.cands().find(function(c) { return c.id === candId; });
   if (cand && cand.entrevistas && cand.entrevistas.length) {
     entScore = cand.puntajeEntrevista != null
@@ -94,13 +95,20 @@ function calcScore(candId) {
     entScore = rm[entRec] != null ? rm[entRec] : entScore;
   }
 
-  // ── Puntaje total (promedio de tests disponibles)
+  // ── Puntaje total — solo tests digitales (entrevista humana no altera el score base)
   var ptos = [];
   if (big5Score  != null) ptos.push(big5Score);
   if (sclScore   != null) ptos.push(sclScore);
   if (cargoScore != null) ptos.push(cargoScore);
   if (entScore   != null) ptos.push(entScore);
   var score = ptos.length ? Math.round(ptos.reduce(function(a, b) { return a + b; }, 0) / ptos.length) : 0;
+
+  // ── Si no hay entrevista RRHH, el sistema genera la evaluación automáticamente
+  if (entScore == null && ptos.length > 0) {
+    entIsSystem = true;
+    entScore    = score;
+    entRec      = score >= 75 ? 'recomendar' : score >= 55 ? 'reserva' : 'no recomendar';
+  }
 
   // Completo = tiene al menos los 3 tests digitales
   var completo = !!(big5 && scl && cargo);
@@ -109,7 +117,7 @@ function calcScore(candId) {
     hasBig5: !!big5,   big5Score: big5Score,   big5Dims: big5Dims,
     hasScl:  !!scl,    sclScore:  sclScore,    sclFlags: sclFlags,
     hasCargo:!!cargo,  cargoScore:cargoScore,  cargoCorr:cargoCorr, cargoTotal:cargoTotal,
-    hasEnt:  entScore != null, entScore: entScore, entRec: entRec,
+    hasEnt:  entScore != null, entScore: entScore, entRec: entRec, entIsSystem: entIsSystem,
     score: score, completo: completo, testsCount: ptos.length
   };
 }
@@ -260,9 +268,10 @@ function tarjetaCandidato(g, puesto, tipo) {
   }
 
   var entBadge = '';
+  var entColors = { recomendar: 'b-gn', reserva: 'b-yw', 'no recomendar': 'b-rd', pendiente: 'b-gr' };
+  var entLabels = { recomendar: 'Recomendar', reserva: 'Reserva', 'no recomendar': 'No recomendado', pendiente: 'Pendiente' };
   if (g.hasEnt) {
-    var entColors = { recomendar: 'b-gn', reserva: 'b-yw', 'no recomendar': 'b-rd', pendiente: 'b-gr' };
-    entBadge = '<span class="bdg ' + (entColors[g.entRec] || 'b-gr') + '">' + (g.entRec || 'pendiente') + '</span>';
+    entBadge = '<span class="bdg ' + (entColors[g.entRec] || 'b-gr') + '">' + (entLabels[g.entRec] || g.entRec) + '</span>';
   }
 
   return '<div class="card" style="border-left:4px solid ' + borderColor + ';margin-bottom:14px">'
@@ -304,11 +313,18 @@ function tarjetaCandidato(g, puesto, tipo) {
                   : '<span class="tgr txs">Sin datos</span>')
     + '</div>'
 
-    // Entrevista HR
+    // Entrevista RRHH o Evaluación del Sistema
     + '<div style="background:#f8fafc;border-radius:8px;padding:12px">'
-    + '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">🎤 Entrevista RRHH</div>'
-    + (g.hasEnt ? barHtml(g.entScore, 'Recomendación') + '<div style="margin-top:6px">' + entBadge + '</div>'
-                : '<span class="tgr txs">Pendiente de evaluador</span>')
+    + '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">'
+    + (g.entIsSystem ? '⚙️ Evaluación del Sistema' : '🎤 Entrevista RRHH')
+    + '</div>'
+    + (g.hasEnt
+        ? barHtml(g.entScore, g.entIsSystem ? 'Análisis automático' : 'Recomendación')
+          + '<div style="margin-top:6px">' + entBadge + '</div>'
+          + (g.entIsSystem
+              ? '<div style="font-size:10px;color:#94a3b8;margin-top:5px">⚙️ Basado en promedio de tests · sin entrevista humana</div>'
+              : '')
+        : '<span class="tgr txs">Sin datos suficientes</span>')
     + '</div>'
 
     + '</div>' // grid tests
@@ -353,7 +369,7 @@ function generarPDF() {
       + '<td style="text-align:center">' + barra(s.big5Score) + '</td>'
       + '<td style="text-align:center">' + barra(s.sclScore) + '</td>'
       + '<td style="text-align:center">' + barra(s.cargoScore) + '</td>'
-      + '<td style="text-align:center">' + barra(s.entScore) + '</td>'
+      + '<td style="text-align:center">' + barra(s.entScore) + (s.entIsSystem ? '<br><span style="font-size:8px;color:#94a3b8">⚙️auto</span>' : '') + '</td>'
       + '<td style="text-align:center;font-size:18px;font-weight:900;color:' + barColor(s.score) + '">' + s.score + '%</td>'
       + '<td style="text-align:center"><span style="background:' + recClr + ';color:#fff;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700">' + rec + '</span></td>'
       + '</tr>';

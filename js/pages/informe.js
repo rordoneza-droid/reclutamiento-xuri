@@ -267,13 +267,6 @@ function tarjetaCandidato(g, puesto, tipo) {
     cargoDetail = '<span style="font-size:11px;color:#64748b;margin-left:6px">(' + g.cargoCorr + '/' + g.cargoTotal + ' correctas)</span>';
   }
 
-  var entBadge = '';
-  var entColors = { recomendar: 'b-gn', reserva: 'b-yw', 'no recomendar': 'b-rd', pendiente: 'b-gr' };
-  var entLabels = { recomendar: 'Recomendar', reserva: 'Reserva', 'no recomendar': 'No recomendado', pendiente: 'Pendiente' };
-  if (g.hasEnt) {
-    entBadge = '<span class="bdg ' + (entColors[g.entRec] || 'b-gr') + '">' + (entLabels[g.entRec] || g.entRec) + '</span>';
-  }
-
   return '<div class="card" style="border-left:4px solid ' + borderColor + ';margin-bottom:14px">'
     + '<div class="cb">'
 
@@ -290,8 +283,8 @@ function tarjetaCandidato(g, puesto, tipo) {
     // Barra total
     + '<div style="margin-bottom:16px">' + barHtml(g.score, 'Promedio general') + '</div>'
 
-    // Scores por test
-    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">'
+    // Scores por test (3 columnas: Big5, SCL, Cargo)
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:16px">'
 
     // Big5
     + '<div style="background:#f8fafc;border-radius:8px;padding:12px">'
@@ -313,23 +306,9 @@ function tarjetaCandidato(g, puesto, tipo) {
                   : '<span class="tgr txs">Sin datos</span>')
     + '</div>'
 
-    // Entrevista RRHH o Evaluación del Sistema
-    + '<div style="background:#f8fafc;border-radius:8px;padding:12px">'
-    + '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">'
-    + (g.entIsSystem ? '⚙️ Evaluación del Sistema' : '🎤 Entrevista RRHH')
-    + '</div>'
-    + (g.hasEnt
-        ? barHtml(g.entScore, g.entIsSystem ? 'Análisis automático' : 'Recomendación')
-          + '<div style="margin-top:6px">' + entBadge + '</div>'
-          + (g.entIsSystem
-              ? '<div style="font-size:10px;color:#94a3b8;margin-top:5px">⚙️ Basado en promedio de tests · sin entrevista humana</div>'
-              : '')
-        : '<span class="tgr txs">Sin datos suficientes</span>')
-    + '</div>'
-
     + '</div>' // grid tests
 
-    // Opinión y recomendación
+    // Decisión y análisis del sistema
     + htmlOpinion(g)
 
     + '</div></div>'; // cb + card

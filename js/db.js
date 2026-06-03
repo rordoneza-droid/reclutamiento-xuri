@@ -100,7 +100,7 @@ function pullGHResultados(){
 }
 function syncNow(){
   pullGH().then(function(ok){
-    pullGHForms();
+    pullGHResultados();
     if(ok){toast('Datos cargados de GitHub','ok');go(curPage);}
     else{['perfiles','convs','cands'].forEach(pushGH);toast('Datos subidos a GitHub','ok');}
   });

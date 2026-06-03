@@ -670,27 +670,10 @@ function renderPaso(){
     +(paso.tipo==='texto'?'<span class="rama-chip">Respuesta libre</span>':'')
     +'</div></div>';
 
-  var prevDim='';
   paso.pregs.forEach(function(p,idx){
-    var dm=p.dim?DIM_META[p.dim]:null;
-
-    // Separador de dimensión cuando cambia
-    if(p.dim&&p.dim!==prevDim&&paso.tipo==='escala'){
-      var dimColor=dm?dm.color:paso.color;
-      var dimBg  =dm?dm.bg  :paso.colorBg;
-      html+='<div class="dim-sep">'
-        +'<div class="dim-sep-line"></div>'
-        +'<div class="dim-sep-label" style="background:'+dimBg+';color:'+dimColor+'">'
-        +(dm?dm.label:p.dim)+'</div>'
-        +'<div class="dim-sep-line"></div>'
-        +'</div>';
-      prevDim=p.dim;
-    }
-
     html+='<div class="q-card" id="wrap_'+p.id+'">';
     html+='<div class="q-top">';
     html+='<span class="q-num">'+paso.label+' · '+(idx+1)+'/'+paso.pregs.length+'</span>';
-    if(dm){html+='<span class="q-dim" style="background:'+dm.bg+';color:'+dm.color+'">'+dm.label+'</span>';}
     html+='</div>';
     html+='<div class="q-txt">'+p.txt+'</div>';
 
@@ -890,8 +873,9 @@ function enviarRespuestas(auto){
   });
   upsert({candId:candId,tipo:'scl',resps:scr,dims:scd,fecha:hoy()});
 
-  // Cargo
-  var car=CARGO.map(function(p){
+  // Cargo (usar las preguntas activas del paso 2, sean default o personalizadas)
+  var carPregs=PASOS[2].pregs;
+  var car=carPregs.map(function(p){
     var sel=respuestas[p.id]!==undefined&&respuestas[p.id]!==''?parseInt(respuestas[p.id]):-1;
     return{txt:p.txt,resp:sel,correcta:p.correcta};
   });

@@ -341,11 +341,14 @@ function verDetalleCandidato(candId) {
   var prevId   = posActual > 0 ? conDatos[posActual - 1].id : null;
   var nextId   = posActual < conDatos.length - 1 ? conDatos[posActual + 1].id : null;
 
-  var navHtml = '<div style="display:flex;justify-content:space-between;align-items:center;width:100%;gap:8px">'
+  var navHtml = '<div style="display:flex;justify-content:space-between;align-items:center;width:100%;gap:8px;flex-wrap:wrap">'
     + (prevId
         ? '<button class="btn bo" onclick="closeM();verDetalleCandidato(\'' + prevId + '\')">← Anterior</button>'
         : '<span></span>')
-    + '<button class="btn bo" onclick="generarPDFCandidato(\'' + candId + '\')" style="gap:5px">🖨️ PDF individual</button>'
+    + '<div style="display:flex;gap:8px">'
+    + '<button class="btn bo" onclick="verFichaCandidato(\'' + candId + '\')">📋 Ver Ficha</button>'
+    + '<button class="btn bo" onclick="generarPDFCandidato(\'' + candId + '\')">🖨️ PDF</button>'
+    + '</div>'
     + (nextId
         ? '<button class="btn bo" onclick="closeM();verDetalleCandidato(\'' + nextId + '\')">Siguiente →</button>'
         : '<span></span>')
@@ -357,6 +360,115 @@ function verDetalleCandidato(candId) {
     navHtml,
     true
   );
+}
+
+// ── VER FICHA DEL CANDIDATO (respuestas del último módulo del test) ──────────
+function verFichaCandidato(candId) {
+  var ficha = DB.resultados().find(function(r) { return r.candId === candId && r.tipo === 'ficha_candidato'; });
+  if (!ficha || !ficha.resps || !ficha.resps.length) {
+    toast('Este candidato no tiene la ficha completada', 'err'); return;
+  }
+  var cand  = DB.cands().find(function(c) { return c.id === candId; });
+  var nombre = cand ? cand.apellidos + ', ' + cand.nombres : 'Candidato';
+
+  var html = '<div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border-radius:12px;'
+    + 'padding:18px 20px;margin-bottom:20px;text-align:center">'
+    + '<div style="font-size:36px;margin-bottom:6px">👤</div>'
+    + '<div style="font-size:16px;font-weight:800;margin-bottom:2px">Datos Personales</div>'
+    + '<div style="font-size:13px;opacity:.8">' + nombre + ' · ' + ficha.resps.length + ' preguntas</div>'
+    + '</div>';
+
+  ficha.resps.forEach(function(r, i) {
+    var tiene = r.resp && r.resp.trim();
+    html += '<div style="margin-bottom:14px;padding:14px 16px;background:#f8fafc;border-radius:10px;'
+      + 'border-left:3px solid ' + (tiene ? '#7c3aed' : '#e2e8f0') + '">'
+      + '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;'
+      + 'letter-spacing:.04em;margin-bottom:5px">Pregunta ' + (i + 1) + '</div>'
+      + '<div style="font-size:13px;font-weight:600;color:#334155;margin-bottom:8px">' + r.txt + '</div>'
+      + '<div style="font-size:14px;color:#1e293b;line-height:1.65;white-space:pre-wrap">'
+      + (tiene ? r.resp : '<span style="color:#94a3b8;font-style:italic">Sin respuesta</span>')
+      + '</div></div>';
+  });
+
+  openM('📋 Ficha — ' + nombre, html,
+    '<div style="display:flex;justify-content:space-between;align-items:center;width:100%">'
+    + '<button class="btn bo" onclick="closeM()">Cerrar</button>'
+    + '<button class="btn bp" onclick="generarPDFFicha(\'' + candId + '\')">🖨️ PDF Ficha</button>'
+    + '</div>',
+    true);
+}
+
+// ── PDF DE LA FICHA ──────────────────────────────────────
+function generarPDFFicha(candId) {
+  var conv  = DB.convs().find(function(c) { return c.id === infC; });
+  var cand  = DB.cands().find(function(c) { return c.id === candId; });
+  var ficha = DB.resultados().find(function(r) { return r.candId === candId && r.tipo === 'ficha_candidato'; });
+  if (!ficha || !ficha.resps || !ficha.resps.length) { toast('Sin datos de ficha', 'err'); return; }
+
+  var cfg    = getCfg();
+  var empresa= cfg.empresa || '[EMPRESA]';
+  var fecha  = new Date().toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric' });
+  var nombre = cand ? cand.apellidos + ', ' + cand.nombres : 'Candidato';
+
+  var rows = ficha.resps.map(function(r, i) {
+    var tiene = r.resp && r.resp.trim();
+    return '<tr>'
+      + '<td style="width:45%;background:#f8fafc;font-weight:600;vertical-align:top;padding:10px 12px">'
+      + '<span style="font-size:9px;color:#7c3aed;font-weight:800;text-transform:uppercase;display:block;margin-bottom:3px">P' + (i+1) + '</span>'
+      + r.txt + '</td>'
+      + '<td style="vertical-align:top;padding:10px 12px;line-height:1.6">'
+      + (tiene ? r.resp : '<span style="color:#94a3b8;font-style:italic">Sin respuesta</span>')
+      + '</td></tr>';
+  }).join('');
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    + '<title>Ficha — ' + nombre + '</title>'
+    + '<style>'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:Arial,sans-serif;font-size:12px;color:#1e293b}'
+    + '.page{width:21cm;min-height:29.7cm;margin:0 auto;padding:1.5cm 2cm}'
+    + '.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #7c3aed;padding-bottom:12px;margin-bottom:18px}'
+    + '.sec{font-size:11px;font-weight:700;color:#7c3aed;border-bottom:1px solid #e9d5ff;padding-bottom:4px;margin:16px 0 10px;text-transform:uppercase;letter-spacing:.05em}'
+    + 'table{width:100%;border-collapse:collapse;font-size:12px}'
+    + 'td{padding:10px 12px;border-bottom:1px solid #f1f5f9;vertical-align:top}'
+    + '.firmas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px}'
+    + '.firma-line{border-bottom:1px solid #334155;height:50px;margin-bottom:8px}'
+    + '.footer{margin-top:16px;font-size:9px;color:#94a3b8;text-align:center;border-top:1px solid #f1f5f9;padding-top:6px}'
+    + '@media print{body{padding:0}.page{margin:0;padding:1.2cm 1.8cm}}'
+    + '</style></head><body><div class="page">'
+
+    + '<div class="hdr">'
+    + '<div><div style="font-size:18px;font-weight:900;color:#7c3aed">' + empresa + '</div>'
+    + '<div style="font-size:10px;color:#64748b;margin-top:2px">' + (cfg.ruc ? 'RUC: ' + cfg.ruc : '') + (cfg.ciudad ? ' · ' + cfg.ciudad : '') + '</div></div>'
+    + '<div style="text-align:right">'
+    + '<div style="font-size:13px;font-weight:700">FICHA DEL CANDIDATO</div>'
+    + (conv ? '<div style="background:#f5f3ff;color:#6d28d9;padding:3px 12px;border-radius:4px;font-weight:700;font-size:11px;margin-top:5px">' + conv.titulo + '</div>' : '')
+    + '<div style="font-size:10px;color:#64748b;margin-top:4px">' + fecha + '</div>'
+    + '</div></div>'
+
+    + '<div class="sec">1. Datos del candidato</div>'
+    + '<table>'
+    + '<tr><td style="background:#f8fafc;font-weight:700;width:35%">Nombre completo</td><td><strong>' + nombre + '</strong></td></tr>'
+    + (cand && cand.ciudad ? '<tr><td style="background:#f8fafc;font-weight:700">Ciudad</td><td>' + cand.ciudad + '</td></tr>' : '')
+    + '<tr><td style="background:#f8fafc;font-weight:700">Fecha de evaluación</td><td>' + (ficha.fecha || fecha) + '</td></tr>'
+    + '</table>'
+
+    + '<div class="sec">2. Respuestas de la Ficha</div>'
+    + '<table>' + rows + '</table>'
+
+    + '<div class="firmas">'
+    + '<div><div class="firma-line"></div><div style="font-weight:700;font-size:11px">' + (cfg.dirRRHH || '______________________________') + '</div><div style="font-size:10px;color:#64748b">Director de RRHH</div></div>'
+    + '<div><div class="firma-line"></div><div style="font-weight:700;font-size:11px">' + nombre + '</div><div style="font-size:10px;color:#64748b">Candidato</div></div>'
+    + '</div>'
+
+    + '<div class="footer">' + empresa + ' | ' + nombre + ' | ' + fecha + ' | CONFIDENCIAL</div>'
+    + '</div>'
+    + '<script>window.onload=function(){window.print();}<\/script>'
+    + '</body></html>';
+
+  var win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
 }
 
 // ── PDF INDIVIDUAL POR CANDIDATO ─────────────────────────
@@ -557,7 +669,6 @@ function generarPDF() {
     var recClr= i < vacantes ? '#059669'   : i < vacantes * 2 ? '#d97706'  : '#94a3b8';
     var bg    = i === 0 ? '#f0fdf4' : '';
     return '<tr style="background:' + bg + '">'
-      + '<td style="text-align:center;font-size:16px">' + medal + '</td>'
       + '<td><strong>' + s.nombre + '</strong><br><span style="font-size:10px;color:#64748b">' + s.ciudad + '</span></td>'
       + '<td style="text-align:center">' + barra(s.big5Score) + '</td>'
       + '<td style="text-align:center">' + barra(s.sclScore) + '</td>'
@@ -670,9 +781,9 @@ function generarPDF() {
         : '<span style="color:#94a3b8">Sin datos</span>')
     + '</div></div></div></div>'
 
-    // RANKING COMPLETO
-    + '<div class="sec">3. Ranking completo de candidatos</div>'
-    + '<table><thead><tr><th>#</th><th>Candidato</th><th style="text-align:center">Big5</th><th style="text-align:center">SCL</th><th style="text-align:center">Cargo</th><th style="text-align:center">Entrev.</th><th style="text-align:center">Total</th><th style="text-align:center">Decisión</th></tr></thead>'
+    // RESULTADO DEL CANDIDATO EVALUADO
+    + '<div class="sec">3. Resultado del Candidato Evaluado</div>'
+    + '<table><thead><tr><th>Candidato</th><th style="text-align:center">Big5</th><th style="text-align:center">SCL</th><th style="text-align:center">Cargo</th><th style="text-align:center">Entrev.</th><th style="text-align:center">Total</th><th style="text-align:center">Decisión</th></tr></thead>'
     + '<tbody>' + rankRows + '</tbody></table>'
 
     // ANÁLISIS Y RECOMENDACIÓN DEL GANADOR

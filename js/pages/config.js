@@ -90,9 +90,6 @@ function limpiarDatos(tipo){
 
   if(tipo==='resultados'){
     DB.sResultados([]);
-    // Borrar también de Firebase
-    if(fbdb){try{fbdb.ref('rrhh/resultados').set([]);}catch(e){}}
-    // Borrar timestamps de test del candidato en localStorage
     Object.keys(localStorage).forEach(function(k){
       if(k.startsWith('rrhh_test_start_'))localStorage.removeItem(k);
     });
@@ -101,7 +98,6 @@ function limpiarDatos(tipo){
   } else if(tipo==='cands'){
     DB.sCands([]);
     DB.sResultados([]);
-    if(fbdb){try{fbdb.ref('rrhh/cands').set([]);fbdb.ref('rrhh/resultados').set([]);}catch(e){}}
     Object.keys(localStorage).forEach(function(k){
       if(k.startsWith('rrhh_test_start_'))localStorage.removeItem(k);
     });
@@ -111,7 +107,6 @@ function limpiarDatos(tipo){
     DB.sConvs([]);
     DB.sCands([]);
     DB.sResultados([]);
-    if(fbdb){try{fbdb.ref('rrhh/convs').set([]);fbdb.ref('rrhh/cands').set([]);fbdb.ref('rrhh/resultados').set([]);}catch(e){}}
     Object.keys(localStorage).forEach(function(k){
       if(k.startsWith('rrhh_test_start_'))localStorage.removeItem(k);
     });
@@ -127,14 +122,6 @@ function resetTotal(){
   DB.sCands([]);
   DB.sResultados([]);
   DB.sTests([]);
-  if(fbdb){
-    try{
-      fbdb.ref('rrhh/convs').set([]);
-      fbdb.ref('rrhh/cands').set([]);
-      fbdb.ref('rrhh/resultados').set([]);
-      fbdb.ref('rrhh/tests').set([]);
-    }catch(e){}
-  }
   Object.keys(localStorage).forEach(function(k){
     if(k.startsWith('rrhh_test_start_'))localStorage.removeItem(k);
   });

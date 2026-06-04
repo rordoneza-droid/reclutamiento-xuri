@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════
-// DB.JS — Base de datos local + Firebase + GitHub + Backup
+// DB.JS — Base de datos local + Firestore (tiempo real) + GitHub + Backup
 // ══════════════════════════════════════════════════════
 
 var DB={
@@ -20,30 +20,63 @@ var DB={
   sTests:function(d){this.save('tests',d);}
 };
 
-// ── FIREBASE SYNC ───────────────────────────────────
+// ── FIRESTORE SYNC (tiempo real) ───────────────────────
+var _fsTablas=['perfiles','convs','cands','resultados','tests'];
+
 function syncToFirebase(tabla,datos){
-  if(!fbdb)return;
-  try{fbdb.ref('rrhh/'+tabla).set(datos).catch(function(err){console.warn('Firebase sync:',err.message);});}
-  catch(e){console.warn('Firebase error:',e);}
+  if(!fbfs)return;
+  setSS('ing');
+  fbfs.collection('rrhh').doc(tabla).set({items:datos})
+    .then(function(){setSS('ok');})
+    .catch(function(err){console.warn('Firestore sync:',err.message);setSS('err');});
 }
 
 function loadFromFirebase(){
-  if(!fbdb){go(curPage);return;}
-  try{
-    fbdb.ref('rrhh').get().then(function(snapshot){
-      var data=snapshot.val();
-      if(data){
-        ['perfiles','convs','cands','forms','resultados'].forEach(function(t){
-          if(data[t]){localStorage.setItem('rrhh_'+t,JSON.stringify(data[t]));DB._c[t]=data[t];}
-        });
-        console.log('✓ Firebase OK');
+  if(!fbfs){go(curPage);return;}
+  var pending=_fsTablas.length;
+  var ready=false;
+  setSS('ing');
+
+  _fsTablas.forEach(function(t){
+    fbfs.collection('rrhh').doc(t).onSnapshot(
+      function(doc){
+        // Esta función se llama en el primer load Y en cada cambio remoto posterior
+        if(doc.exists){
+          var data=doc.data().items||[];
+          localStorage.setItem('rrhh_'+t,JSON.stringify(data));
+          DB._c[t]=data;
+        }
+        // Solo la primera ronda de snapshots dispara go(curPage)
+        if(!ready){
+          pending--;
+          if(pending<=0){ready=true;setSS('ok');go(curPage);}
+        }
+      },
+      function(err){
+        console.warn('Firestore listener error:',t,err.message);
+        if(!ready){pending--;if(pending<=0){ready=true;setSS('err');go(curPage);}}
       }
-      go(curPage);
-    }).catch(function(err){console.warn('Firebase load:',err.message);go(curPage);});
-  }catch(e){console.warn('Firebase error:',e);go(curPage);}
+    );
+  });
+
+  // Fallback: si Firestore no responde en 7 s, abrimos igual con datos locales
+  setTimeout(function(){if(!ready){ready=true;console.warn('Firestore timeout — usando datos locales');go(curPage);}},7000);
 }
 
-// ── GITHUB SYNC ─────────────────────────────────────
+// Guardar TODOS los datos a Firestore (botón manual 💾)
+function saveAll(){
+  if(!fbfs){toast('Firestore no disponible','err');return;}
+  setSS('ing');
+  var batch=fbfs.batch();
+  _fsTablas.forEach(function(t){
+    batch.set(fbfs.collection('rrhh').doc(t),{items:DB.get(t)});
+  });
+  batch.commit()
+    .then(function(){setSS('ok');toast('Guardado completo en Firestore','ok');})
+    .catch(function(err){setSS('err');toast('Error al guardar: '+err.message,'err');});
+}
+
+// ── GITHUB SYNC (respaldo opcional) ─────────────────────
 var _syncT={},_shas={};
 
 function setSS(s){
@@ -99,11 +132,16 @@ function pullGHResultados(){
   }).catch(function(){});
 }
 function syncNow(){
-  pullGH().then(function(ok){
-    pullGHResultados();
-    if(ok){toast('Datos cargados de GitHub','ok');go(curPage);}
-    else{['perfiles','convs','cands'].forEach(pushGH);toast('Datos subidos a GitHub','ok');}
-  });
+  // Fuerza guardado completo en Firestore + opcionalmente en GitHub
+  saveAll();
+  var c=getCfg();
+  if(c.tok&&c.own&&c.repo){
+    pullGH().then(function(ok){
+      pullGHResultados();
+      if(ok){toast('GitHub sincronizado','ok');go(curPage);}
+      else{['perfiles','convs','cands'].forEach(pushGH);toast('Datos subidos a GitHub','ok');}
+    });
+  }
 }
 function testConn(){
   var c=getCfg();if(!c.tok||!c.own||!c.repo){toast('Completa los datos primero','w');return;}

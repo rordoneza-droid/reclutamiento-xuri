@@ -15,6 +15,10 @@ function pgEntrev(){
       return c.convocatoriaId===entC&&['en_entrevista','finalista','seleccionado','reserva'].indexOf(c.etapa)>=0;
     }).sort(function(a,b){return(b.puntajeTotal||0)-(a.puntajeTotal||0);});
 
+    // Pre-calcular qué candidatos tienen ficha completada
+    var _fichaIds={};
+    DB.resultados().forEach(function(r){if(r.tipo==='ficha_candidato')_fichaIds[r.candId]=true;});
+
     var rows=cands.map(function(c){
       var ents=c.entrevistas||[];
       var prom=ents.length?Math.round(ents.reduce(function(s,e){return s+e.puntaje;},0)/ents.length):null;
@@ -25,6 +29,7 @@ function pgEntrev(){
           ?'<span class="bdg '+sCls(prom)+'">'+lastEnt.notaSobre10+'/10 &nbsp;('+prom+'%)</span>'
           :'<span class="bdg '+sCls(prom)+'">'+prom+'%</span>')
         :'<span style="color:#94a3b8;font-size:13px">Pendiente</span>';
+      var fichaEval=ents.find(function(e){return e.tipo==='Ficha';});
       return'<tr><td><strong>'+c.apellidos+', '+c.nombres+'</strong></td>'
         +'<td>'+(c.puntajePreseleccion!=null?'<span class="bdg '+sCls(c.puntajePreseleccion)+'">'+c.puntajePreseleccion+'%</span>':'-')+'</td>'
         +'<td>'+(c.puntajeSeleccion!=null?'<span class="bdg '+sCls(c.puntajeSeleccion)+'">'+c.puntajeSeleccion+'%</span>':'-')+'</td>'
@@ -32,6 +37,11 @@ function pgEntrev(){
         +'<td>'+(tot!=null?'<span class="bdg '+sCls(tot)+'">'+tot+'%</span>':'-')+'</td>'
         +'<td><span class="bdg '+(EB[c.etapa]||'b-gr')+'">'+(EL[c.etapa]||c.etapa)+'</span></td>'
         +'<td><div class="flex g2">'
+        +(_fichaIds[c.id]
+          ?'<button class="btn bo bxs" onclick="modalRevisarFicha(\''+c.id+'\')" '
+            +'style="'+(fichaEval?'border-color:#7c3aed;color:#7c3aed':'')+'">📋 Ficha'
+            +(fichaEval?' ✓':'')+'</button>'
+          :'')
         +(ents.length?'<button class="btn bo bxs" onclick="verEntrevista(\''+c.id+'\')">👁 Ver</button>':'')
         +'<button class="btn bp bxs" onclick="modalEntVirtual(\''+c.id+'\')">🎤 Entrevistar</button>'
         +'<button class="btn bo bxs" onclick="regresarEtapa(\''+c.id+'\')">← Regresar</button>'
@@ -314,6 +324,214 @@ function verEntrevista(candId){
     '<button class="btn bo" onclick="closeM()">Cerrar</button>'
     +'<button class="btn bp" onclick="closeM();modalEntVirtual(\''+candId+'\')">🎤 Nueva entrevista</button>',
     true);
+}
+
+// ── REVISAR FICHA DEL CANDIDATO Y CALIFICAR ──────────────
+function modalRevisarFicha(candId){
+  var ficha=DB.resultados().find(function(r){return r.candId===candId&&r.tipo==='ficha_candidato';});
+  if(!ficha||!ficha.resps||!ficha.resps.length){toast('El candidato aún no ha completado la ficha','err');return;}
+  var c=DB.cands().find(function(x){return x.id===candId;});
+  if(!c)return;
+  var nombre=c.apellidos+', '+c.nombres;
+
+  // Respuestas del candidato
+  var qaHtml='<div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border-radius:12px;'
+    +'padding:16px 20px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center">'
+    +'<div><div style="font-size:15px;font-weight:800;margin-bottom:2px">👤 Datos Personales</div>'
+    +'<div style="font-size:12px;opacity:.8">'+nombre+' · '+ficha.resps.length+' preguntas · '+ficha.fecha+'</div></div>'
+    +'<button onclick="imprimirFichaEntrev(\''+candId+'\')" '
+    +'style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:7px 14px;border-radius:8px;'
+    +'font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>'
+    +'</div>';
+
+  ficha.resps.forEach(function(r,i){
+    var tiene=r.resp&&r.resp.trim();
+    qaHtml+='<div style="margin-bottom:12px;padding:12px 14px;background:#f8fafc;border-radius:10px;'
+      +'border-left:3px solid '+(tiene?'#7c3aed':'#e2e8f0')+'">'
+      +'<div style="font-size:10px;font-weight:800;color:#7c3aed;text-transform:uppercase;'
+      +'letter-spacing:.04em;margin-bottom:4px">Pregunta '+(i+1)+'</div>'
+      +'<div style="font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">'+r.txt+'</div>'
+      +'<div style="font-size:14px;color:#1e293b;line-height:1.65;white-space:pre-wrap">'
+      +(tiene?r.resp:'<span style="color:#94a3b8;font-style:italic">Sin respuesta</span>')
+      +'</div></div>';
+  });
+
+  // Evaluación previa si existe
+  var fichaEval=(c.entrevistas||[]).find(function(e){return e.tipo==='Ficha';});
+  var prevOp=fichaEval?fichaEval.opinion||'':'';
+  var prevN=fichaEval&&fichaEval.notaSobre10!=null?fichaEval.notaSobre10:'';
+  var prevR=fichaEval?fichaEval.rec||'recomendar':'recomendar';
+
+  var evalHtml='<div style="border-top:2px solid #e2e8f0;margin-top:18px;padding-top:18px">'
+    +'<div style="font-size:14px;font-weight:800;color:#1e293b;margin-bottom:12px">✏️ Tu evaluación</div>'
+    +(fichaEval?'<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;'
+      +'padding:8px 12px;font-size:12px;color:#92400e;margin-bottom:12px">'
+      +'Ya evaluada: <strong>'+fichaEval.notaSobre10+'/10</strong>. Puedes actualizar abajo.</div>':'')
+    +'<div class="fg"><label>Opinión del entrevistador <span class="rq">*</span></label>'
+    +'<textarea id="ef-opinion" rows="4" placeholder="Escribe tu análisis basado en las respuestas del candidato...">'+prevOp+'</textarea></div>'
+    +'<div class="fr fr2" style="align-items:flex-start">'
+    +'<div class="fg"><label>Calificación</label>'
+    +'<div style="display:flex;align-items:center;gap:12px;margin-top:8px">'
+    +'<input type="number" id="ef-score" min="0" max="10" step="0.5" value="'+prevN+'" placeholder="0" '
+    +'style="width:90px;font-size:30px;font-weight:800;text-align:center;padding:8px;'
+    +'border:2px solid #e2e8f0;border-radius:12px;outline:none;font-family:inherit" '
+    +'onfocus="this.style.borderColor=\'#7c3aed\'" onblur="this.style.borderColor=\'#e2e8f0\'" '
+    +'oninput="actualizarPctFicha(this.value)">'
+    +'<div><div style="font-size:24px;color:#64748b;font-weight:700;line-height:1">/ 10</div>'
+    +'<div id="ef-pct" style="font-size:12px;color:#94a3b8;margin-top:4px;font-weight:600">'
+    +(prevN!==''?Math.round(parseFloat(prevN)/10*100)+'%':'— %')+'</div>'
+    +'</div></div></div>'
+    +'<div class="fg"><label>Recomendación</label>'
+    +'<select id="ef-rec" style="margin-top:8px">'
+    +'<option value="recomendar"'+(prevR==='recomendar'?' selected':'')+'>✅ Recomendar</option>'
+    +'<option value="reserva"'+(prevR==='reserva'?' selected':'')+'>⚠️ Reserva</option>'
+    +'<option value="no recomendar"'+(prevR==='no recomendar'?' selected':'')+'>❌ No recomendar</option>'
+    +'</select></div></div>'
+    +'</div>';
+
+  openM('📋 Ficha — '+nombre, qaHtml+evalHtml,
+    '<div style="display:flex;justify-content:space-between;align-items:center;width:100%">'
+    +'<button class="btn bo" onclick="closeM()">Cancelar</button>'
+    +'<button class="btn bp" onclick="guardarEvalFicha(\''+candId+'\')" '
+    +'style="background:#7c3aed">💾 Guardar evaluación</button>'
+    +'</div>',
+    true);
+}
+
+function actualizarPctFicha(val){
+  var el=document.getElementById('ef-pct');if(!el)return;
+  var n=parseFloat(val);
+  el.textContent=(!isNaN(n)&&n>=0&&n<=10)?Math.round(n/10*100)+'%':'— %';
+}
+
+function guardarEvalFicha(candId){
+  var opinion=(document.getElementById('ef-opinion')||{}).value||'';
+  var notaStr=(document.getElementById('ef-score')||{}).value||'';
+  var rec=(document.getElementById('ef-rec')||{}).value||'recomendar';
+  var nota=parseFloat(notaStr);
+  if(!opinion.trim()){toast('Escribe tu opinión','err');return;}
+  if(isNaN(nota)||nota<0||nota>10){toast('Calificación debe ser entre 0 y 10','err');return;}
+
+  var puntaje=Math.round(nota/10*100);
+  var ent={
+    tipo:'Ficha',
+    entrevistador:getCfg().dirRRHH||'Evaluador',
+    opinion:opinion,
+    notaSobre10:nota,
+    puntaje:puntaje,
+    rec:rec,
+    fecha:today()
+  };
+
+  var all=DB.cands();
+  var idx=-1;all.forEach(function(c,i){if(c.id===candId)idx=i;});if(idx<0)return;
+  if(!all[idx].entrevistas)all[idx].entrevistas=[];
+  // Actualiza si ya existe, si no agrega
+  var fi=all[idx].entrevistas.findIndex(function(e){return e.tipo==='Ficha';});
+  if(fi>=0)all[idx].entrevistas[fi]=ent;else all[idx].entrevistas.push(ent);
+  var ents=all[idx].entrevistas;
+  all[idx].puntajeEntrevista=Math.round(ents.reduce(function(s,e){return s+e.puntaje;},0)/ents.length);
+  all[idx].puntajeTotal=calcTot(all[idx]);
+  DB.sCands(all);
+  closeM();
+  toast('Evaluación de ficha guardada — '+nota+'/10 ('+puntaje+'%)','ok');
+  pgEntrev();
+}
+
+function imprimirFichaEntrev(candId){
+  var ficha=DB.resultados().find(function(r){return r.candId===candId&&r.tipo==='ficha_candidato';});
+  if(!ficha||!ficha.resps||!ficha.resps.length){toast('Sin datos de ficha','err');return;}
+  var c=DB.cands().find(function(x){return x.id===candId;});
+  var conv=DB.convs().find(function(x){return c&&x.id===c.convocatoriaId;});
+  var nombre=c?c.apellidos+', '+c.nombres:'Candidato';
+  var cfg=getCfg();
+  var empresa=cfg.empresa||'[EMPRESA]';
+  var fecha=new Date().toLocaleDateString('es',{day:'2-digit',month:'long',year:'numeric'});
+
+  // Leer valores del modal si está abierto, si no usar los guardados
+  var opEl=document.getElementById('ef-opinion');
+  var scEl=document.getElementById('ef-score');
+  var rcEl=document.getElementById('ef-rec');
+  var opinion=opEl?opEl.value:'';
+  var nota=scEl?scEl.value:'';
+  var rec=rcEl?rcEl.value:'';
+  if(!opinion&&c&&c.entrevistas){
+    var sv=c.entrevistas.find(function(e){return e.tipo==='Ficha';});
+    if(sv){opinion=sv.opinion||'';nota=sv.notaSobre10!=null?sv.notaSobre10:'';rec=sv.rec||'';}
+  }
+  var notaNum=parseFloat(nota);
+  var pctStr=!isNaN(notaNum)?'('+Math.round(notaNum/10*100)+'%)':'';
+  var recLabel={recomendar:'✅ Recomendar',reserva:'⚠️ Reserva','no recomendar':'❌ No recomendar'}[rec]||'';
+
+  var rows=ficha.resps.map(function(r,i){
+    var tiene=r.resp&&r.resp.trim();
+    return'<tr>'
+      +'<td style="width:40%;background:#f8fafc;font-weight:600;vertical-align:top;padding:10px 12px">'
+      +'<span style="font-size:9px;color:#7c3aed;font-weight:800;text-transform:uppercase;display:block;margin-bottom:2px">P'+(i+1)+'</span>'
+      +r.txt+'</td>'
+      +'<td style="vertical-align:top;padding:10px 12px;line-height:1.65;font-size:12px">'
+      +(tiene?r.resp:'<span style="color:#94a3b8;font-style:italic">Sin respuesta</span>')
+      +'</td></tr>';
+  }).join('');
+
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<title>Ficha — '+nombre+'</title>'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:12px;color:#1e293b}'
+    +'.page{width:21cm;min-height:29.7cm;margin:0 auto;padding:1.5cm 2cm}'
+    +'.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #7c3aed;padding-bottom:12px;margin-bottom:18px}'
+    +'.sec{font-size:11px;font-weight:700;color:#7c3aed;border-bottom:1px solid #e9d5ff;padding-bottom:4px;margin:16px 0 10px;text-transform:uppercase;letter-spacing:.05em}'
+    +'table{width:100%;border-collapse:collapse;font-size:12px}'
+    +'td{padding:10px 12px;border-bottom:1px solid #f1f5f9}'
+    +'.eval-box{background:#f5f3ff;border:2px solid #7c3aed;border-radius:10px;padding:16px;margin-top:18px}'
+    +'.firmas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px}'
+    +'.firma-line{border-bottom:1px solid #334155;height:50px;margin-bottom:8px}'
+    +'.footer{margin-top:14px;font-size:9px;color:#94a3b8;text-align:center;border-top:1px solid #f1f5f9;padding-top:6px}'
+    +'@media print{body{padding:0}.page{margin:0;padding:1.2cm 1.8cm}}'
+    +'</style></head><body><div class="page">'
+    +'<div class="hdr">'
+    +'<div><div style="font-size:18px;font-weight:900;color:#7c3aed">'+empresa+'</div>'
+    +'<div style="font-size:10px;color:#64748b;margin-top:2px">'+(cfg.ruc?'RUC: '+cfg.ruc:'')+(cfg.ciudad?' · '+cfg.ciudad:'')+'</div></div>'
+    +'<div style="text-align:right">'
+    +'<div style="font-size:13px;font-weight:700">ENTREVISTA — DATOS PERSONALES</div>'
+    +(conv?'<div style="background:#f5f3ff;color:#6d28d9;padding:3px 12px;border-radius:4px;font-weight:700;font-size:11px;margin-top:5px">'+conv.titulo+'</div>':'')
+    +'<div style="font-size:10px;color:#64748b;margin-top:4px">'+fecha+'</div>'
+    +'</div></div>'
+    +'<div class="sec">1. Datos del candidato</div>'
+    +'<table>'
+    +'<tr><td style="background:#f8fafc;font-weight:700;width:35%">Nombre</td><td><strong>'+nombre+'</strong></td></tr>'
+    +(c&&c.ciudad?'<tr><td style="background:#f8fafc;font-weight:700">Ciudad</td><td>'+c.ciudad+'</td></tr>':'')
+    +'<tr><td style="background:#f8fafc;font-weight:700">Fecha del formulario</td><td>'+(ficha.fecha||fecha)+'</td></tr>'
+    +'</table>'
+    +'<div class="sec">2. Respuestas del candidato</div>'
+    +'<table>'+rows+'</table>'
+    +(opinion||nota
+      ?'<div class="eval-box">'
+        +'<div style="font-size:11px;font-weight:800;color:#6d28d9;text-transform:uppercase;margin-bottom:10px">Evaluación del entrevistador</div>'
+        +(nota?'<div style="font-size:28px;font-weight:900;color:#7c3aed;margin-bottom:6px">'+nota+' / 10 <span style="font-size:14px;color:#64748b;font-weight:600">'+pctStr+'</span></div>':'')
+        +(recLabel?'<div style="font-size:12px;font-weight:700;margin-bottom:8px">'+recLabel+'</div>':'')
+        +(opinion?'<div style="font-size:12px;line-height:1.65;color:#1e293b;white-space:pre-wrap">'+opinion+'</div>':'')
+        +'</div>'
+      :'<div style="margin-top:18px;border:2px dashed #e9d5ff;border-radius:10px;padding:16px">'
+        +'<div style="font-size:11px;font-weight:800;color:#6d28d9;text-transform:uppercase;margin-bottom:8px">Evaluación del entrevistador</div>'
+        +'<table><tr>'
+        +'<td style="width:35%;font-weight:600;background:#f8fafc">Calificación</td>'
+        +'<td>_______ / 10</td></tr>'
+        +'<tr><td style="font-weight:600;background:#f8fafc;vertical-align:top;padding-top:10px">Opinión</td>'
+        +'<td style="height:80px"></td></tr>'
+        +'<tr><td style="font-weight:600;background:#f8fafc">Recomendación</td>'
+        +'<td>☐ Recomendar &nbsp;&nbsp; ☐ Reserva &nbsp;&nbsp; ☐ No recomendar</td></tr>'
+        +'</table></div>')
+    +'<div class="firmas">'
+    +'<div><div class="firma-line"></div><div style="font-weight:700;font-size:11px">'+(cfg.dirRRHH||'______________________________')+'</div><div style="font-size:10px;color:#64748b">Director de RRHH / Entrevistador</div></div>'
+    +'<div><div class="firma-line"></div><div style="font-weight:700;font-size:11px">'+nombre+'</div><div style="font-size:10px;color:#64748b">Candidato</div></div>'
+    +'</div>'
+    +'<div class="footer">'+empresa+' | '+nombre+' | '+fecha+' | CONFIDENCIAL</div>'
+    +'</div>'
+    +'<script>window.onload=function(){window.print();}<\/script>'
+    +'</body></html>';
+
+  var win=window.open('','_blank');
+  win.document.write(html);win.document.close();
 }
 
 // ── DEFINIR FINALISTAS ───────────────────────────────────

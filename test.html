@@ -398,20 +398,24 @@ select:disabled{background:var(--g50);color:var(--g400)}
   </div>
 </div>
 
-<!-- ── FIREBASE ── -->
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js"></script>
+<!-- ── FIREBASE FIRESTORE ── -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script>
-const fbApp=firebase.initializeApp({
-  apiKey:"AIzaSyB9bOIeXc1OBYa0Vsst6EDV0TxyPt121XU",
-  authDomain:"rrhh-sistema-87426.firebaseapp.com",
-  databaseURL:"https://rrhh-sistema-87426-default-rtdb.firebaseio.com",
-  projectId:"rrhh-sistema-87426",
-  storageBucket:"rrhh-sistema-87426.firebasestorage.app",
-  messagingSenderId:"432686202734",
-  appId:"1:432686202734:web:21f822d71754688d328b7f"
-});
-const fbdb=firebase.database();
+let fbfs;
+try{
+  firebase.initializeApp({
+    apiKey:"AIzaSyB9bOIeXc1OBYa0Vsst6EDV0TxyPt121XU",
+    authDomain:"rrhh-sistema-87426.firebaseapp.com",
+    projectId:"rrhh-sistema-87426",
+    storageBucket:"rrhh-sistema-87426.firebasestorage.app",
+    messagingSenderId:"432686202734",
+    appId:"1:432686202734:web:21f822d71754688d328b7f"
+  });
+  fbfs=firebase.firestore();
+  fbfs.settings({ignoreUndefinedProperties:true});
+  console.log('✓ Firestore listo (test)');
+}catch(e){console.warn('Firebase init:',e);}
 </script>
 
 <!-- ── DATOS ── -->
@@ -970,7 +974,7 @@ function enviarRespuestas(auto){
   }
 
   localStorage.setItem('rrhh_resultados',JSON.stringify(allRes));
-  try{fbdb.ref('rrhh/resultados').set(allRes).catch(function(e){console.warn('FB:',e.message);});}catch(e){}
+  if(fbfs){fbfs.collection('rrhh').doc('resultados').set({items:allRes}).catch(function(e){console.warn('Firestore:',e.message);});}
   localStorage.removeItem('rrhh_test_start_'+candId);
 
   // Mostrar fin
@@ -992,16 +996,40 @@ function resetearCandidato(){
   var id=document.getElementById('sel-reset').value;
   if(!id){alert('Selecciona un candidato');return;}
   if(!confirm('⚠️ Borrar TODOS los datos de este candidato. ¿Continuar?'))return;
-  var allRes=JSON.parse(localStorage.getItem('rrhh_resultados')||'[]');
-  localStorage.setItem('rrhh_resultados',JSON.stringify(allRes.filter(function(r){return r.candId!==id;})));
+  var allRes=JSON.parse(localStorage.getItem('rrhh_resultados')||'[]').filter(function(r){return r.candId!==id;});
+  localStorage.setItem('rrhh_resultados',JSON.stringify(allRes));
+  if(fbfs){fbfs.collection('rrhh').doc('resultados').set({items:allRes}).catch(function(e){console.warn('Firestore:',e.message);});}
   localStorage.removeItem('rrhh_test_start_'+id);
   alert('✓ Datos eliminados.');location.reload();
 }
 
+// ─── CARGAR DATOS DESDE FIRESTORE ───────────────────
+function loadDataFromFirestore(cb){
+  if(!fbfs){cb();return;}
+  var done=false;
+  function finish(){if(!done){done=true;cb();}}
+  var tablas=['convs','cands','tests'];
+  var pending=tablas.length;
+  tablas.forEach(function(t){
+    fbfs.collection('rrhh').doc(t).get()
+      .then(function(doc){
+        if(doc.exists){
+          var data=doc.data().items||[];
+          localStorage.setItem('rrhh_'+t,JSON.stringify(data));
+        }
+        if(--pending<=0)finish();
+      })
+      .catch(function(){if(--pending<=0)finish();});
+  });
+  setTimeout(function(){finish();},5000); // fallback 5 s
+}
+
 // ─── INIT ───────────────────────────────────────────
 document.getElementById('stepper').style.display='none';
-cargarConvs();
-llenarReset();
+loadDataFromFirestore(function(){
+  cargarConvs();
+  llenarReset();
+});
 </script>
 </body>
 </html>

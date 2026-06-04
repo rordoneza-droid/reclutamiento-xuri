@@ -320,6 +320,38 @@ function tarjetaCandidato(g, puesto, tipo) {
     // Decisión y análisis del sistema
     + htmlOpinion(g)
 
+    // Comentarios del evaluador (ficha + entrevista virtual)
+    + (function() {
+        var cr = DB.cands().find(function(c) { return c.id === g.id; });
+        if (!cr || !cr.entrevistas || !cr.entrevistas.length) return '';
+        var fichaEval  = cr.entrevistas.find(function(e) { return e.tipo === 'Ficha'; });
+        var virtEval   = cr.entrevistas.slice().reverse().find(function(e) { return e.tipo === 'Virtual'; });
+        var bloques = [];
+        if (fichaEval && fichaEval.opinion) {
+          bloques.push('<div style="background:#f5f3ff;border-left:3px solid #7c3aed;border-radius:8px;padding:12px;margin-bottom:8px">'
+            + '<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:5px">📋 Evaluación de Ficha (Datos Personales)'
+            + (fichaEval.notaSobre10 != null ? ' · <strong>' + fichaEval.notaSobre10 + '/10</strong> (' + fichaEval.puntaje + '%)' : '')
+            + (fichaEval.rec ? ' · ' + ({recomendar:'✅',reserva:'⚠️','no recomendar':'❌'}[fichaEval.rec]||'') : '')
+            + '</div>'
+            + '<div style="font-size:13px;color:#334155;line-height:1.65;white-space:pre-wrap">' + fichaEval.opinion + '</div>'
+            + '</div>');
+        }
+        if (virtEval && virtEval.opinion) {
+          bloques.push('<div style="background:#eff6ff;border-left:3px solid #4f46e5;border-radius:8px;padding:12px;margin-bottom:8px">'
+            + '<div style="font-size:11px;font-weight:700;color:#4f46e5;margin-bottom:5px">🎤 Entrevista Virtual'
+            + (virtEval.notaSobre10 != null ? ' · <strong>' + virtEval.notaSobre10 + '/10</strong> (' + virtEval.puntaje + '%)' : '')
+            + (virtEval.fecha ? ' · ' + virtEval.fecha : '')
+            + '</div>'
+            + '<div style="font-size:13px;color:#334155;line-height:1.65;white-space:pre-wrap">' + virtEval.opinion + '</div>'
+            + '</div>');
+        }
+        if (!bloques.length) return '';
+        return '<div style="border-top:1px solid #e2e8f0;margin-top:14px;padding-top:14px">'
+          + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:10px">💬 Comentarios del evaluador</div>'
+          + bloques.join('')
+          + '</div>';
+      })()
+
     + '</div></div>'; // cb + card
 }
 

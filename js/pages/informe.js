@@ -3,6 +3,7 @@
 // ══════════════════════════════════════════════════════
 
 var infC = '';
+var _infScores = []; // cache del ranking actual
 
 // ── CALCULAR SCORE DE UN CANDIDATO ─────────────────────
 function calcScore(candId) {
@@ -161,11 +162,10 @@ function pgInforme() {
       return sc;
     }).sort(function(a, b) { return b.score - a.score; });
 
-    var conDatos    = scores.filter(function(s) { return s.testsCount > 0; });
-    var sinDatos    = scores.filter(function(s) { return s.testsCount === 0; });
-    var ganadores   = conDatos.slice(0, vacantes);
-    var suplentes   = conDatos.slice(vacantes, vacantes * 2);
-    var resto       = conDatos.slice(vacantes * 2);
+    _infScores = scores; // guardar para verDetalleCandidato
+
+    var conDatos  = scores.filter(function(s) { return s.testsCount > 0; });
+    var sinDatos  = scores.filter(function(s) { return s.testsCount === 0; });
 
     // ── STATS ─────────────────────────────────────
     var html = '<div class="sg">'
@@ -176,46 +176,55 @@ function pgInforme() {
       + '</div>'
       + htmlResumenContratacion(conDatos, vacantes);
 
-    // ── GANADORES ──────────────────────────────────
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:20px 0 12px">'
-      + '<h2 style="font-size:18px;font-weight:800;color:#059669">🏆 Recomendados para contratar</h2>'
-      + '<button class="btn bo" onclick="generarPDF()" style="gap:6px">🖨️ Generar PDF</button>'
+    // ── BOTÓN PDF ──────────────────────────────────
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:20px 0 14px">'
+      + '<h2 style="font-size:17px;font-weight:800;color:#1e293b">📊 Ranking de candidatos</h2>'
+      + '<button class="btn bo" onclick="generarPDF()">🖨️ Generar PDF</button>'
       + '</div>';
 
-    if (ganadores.length) {
-      ganadores.forEach(function(g, i) {
-        html += tarjetaCandidato(g, i + 1, 'ganador');
-      });
-    } else {
+    // ── TABLA DE RANKING ───────────────────────────
+    if (!conDatos.length) {
       html += '<div class="al al-w">Ningún candidato ha completado los tests aún. Usa el botón "Abrir Evaluación Digital" en Selección.</div>';
-    }
+    } else {
+      html += '<div class="card"><div class="cb" style="padding:0"><div class="tw"><table style="font-size:13px">'
+        + '<thead><tr><th style="width:36px">#</th><th>Candidato</th>'
+        + '<th style="text-align:center">Big5</th><th style="text-align:center">SCL</th>'
+        + '<th style="text-align:center">Cargo</th><th style="text-align:center">Total</th>'
+        + '<th style="text-align:center">Decisión</th><th></th></tr></thead><tbody>';
 
-    // ── SUPLENTES ─────────────────────────────────
-    if (suplentes.length) {
-      html += '<h2 style="font-size:16px;font-weight:700;color:#d97706;margin:20px 0 10px">📋 Suplentes</h2>';
-      suplentes.forEach(function(s, i) {
-        html += tarjetaCandidato(s, i + 1, 'suplente');
-      });
-    }
+      conDatos.forEach(function(s, i) {
+        var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+        var tipo  = i < vacantes ? 'ganador' : i < vacantes * 2 ? 'suplente' : 'otro';
+        var decLabel = { ganador:'✓ Contratar', suplente:'Suplente', otro:'-' }[tipo];
+        var decCls   = { ganador:'b-gn',        suplente:'b-yw',     otro:'b-gr' }[tipo];
+        var rowBg    = i === 0 ? 'background:#f0fdf4' : i < vacantes ? 'background:#f7fef9' : '';
 
-    // ── RESTO CON DATOS ───────────────────────────
-    if (resto.length) {
-      html += '<h2 style="font-size:15px;font-weight:700;color:#64748b;margin:20px 0 10px">Otros candidatos evaluados</h2>';
-      resto.forEach(function(r) {
-        html += tarjetaCandidato(r, null, 'otro');
-      });
-    }
+        function chip(v) {
+          if (v == null) return '<span style="color:#cbd5e1">—</span>';
+          return '<span style="font-weight:700;color:' + barColor(v) + '">' + v + '%</span>';
+        }
 
-    // ── SIN DATOS ─────────────────────────────────
-    if (sinDatos.length) {
-      html += '<h2 style="font-size:15px;font-weight:700;color:#dc2626;margin:20px 0 10px">⚠️ Sin datos de tests</h2>'
-        + '<div class="card"><div class="cb"><table style="width:100%;font-size:13px">'
-        + '<thead><tr><th>Candidato</th><th>Ciudad</th><th>Etapa</th></tr></thead><tbody>';
-      sinDatos.forEach(function(c) {
-        html += '<tr><td><strong>' + c.nombre + '</strong></td><td>' + c.ciudad + '</td>'
-          + '<td><span class="bdg b-gr">' + (c.etapa || '-') + '</span></td></tr>';
+        html += '<tr style="' + rowBg + '">'
+          + '<td style="text-align:center;font-size:15px">' + medal + '</td>'
+          + '<td><strong>' + s.nombre + '</strong><br><span style="font-size:11px;color:#94a3b8">' + s.ciudad + '</span></td>'
+          + '<td style="text-align:center">' + chip(s.big5Score) + '</td>'
+          + '<td style="text-align:center">' + chip(s.sclScore) + '</td>'
+          + '<td style="text-align:center">' + chip(s.cargoScore) + '</td>'
+          + '<td style="text-align:center;font-size:16px;font-weight:900;color:' + barColor(s.score) + '">' + s.score + '%</td>'
+          + '<td style="text-align:center"><span class="bdg ' + decCls + '" style="font-size:11px">' + decLabel + '</span></td>'
+          + '<td><button class="btn bo bxs" onclick="verDetalleCandidato(\'' + s.id + '\')">👁 Ver</button></td>'
+          + '</tr>';
       });
-      html += '</tbody></table></div></div>';
+
+      html += '</tbody></table></div></div></div>';
+
+      // Sin datos al pie de la tabla
+      if (sinDatos.length) {
+        html += '<div style="font-size:12px;color:#dc2626;margin-top:8px;padding:8px 12px;background:#fff1f2;border-radius:8px">'
+          + '⚠️ Sin datos de tests: '
+          + sinDatos.map(function(c) { return '<strong>' + c.nombre + '</strong>'; }).join(', ')
+          + '</div>';
+      }
     }
 
     body = html;
@@ -312,6 +321,42 @@ function tarjetaCandidato(g, puesto, tipo) {
     + htmlOpinion(g)
 
     + '</div></div>'; // cb + card
+}
+
+// ── VER DETALLE INDIVIDUAL ───────────────────────────────
+function verDetalleCandidato(candId) {
+  var g = _infScores.find(function(s) { return s.id === candId; });
+  if (!g) return;
+
+  // Determinar tipo y puesto en el ranking
+  var conv    = DB.convs().find(function(c) { return c.id === infC; });
+  var vacantes = conv ? conv.vacantes : 1;
+  var idx     = _infScores.filter(function(s) { return s.testsCount > 0; }).findIndex(function(s) { return s.id === candId; });
+  var tipo    = idx < vacantes ? 'ganador' : idx < vacantes * 2 ? 'suplente' : 'otro';
+  var puesto  = tipo === 'ganador' ? idx + 1 : tipo === 'suplente' ? idx - vacantes + 1 : null;
+
+  // Navegación anterior / siguiente entre candidatos con datos
+  var conDatos = _infScores.filter(function(s) { return s.testsCount > 0; });
+  var posActual = conDatos.findIndex(function(s) { return s.id === candId; });
+  var prevId   = posActual > 0 ? conDatos[posActual - 1].id : null;
+  var nextId   = posActual < conDatos.length - 1 ? conDatos[posActual + 1].id : null;
+
+  var navHtml = '<div style="display:flex;justify-content:space-between;align-items:center;width:100%;gap:8px">'
+    + (prevId
+        ? '<button class="btn bo" onclick="closeM();verDetalleCandidato(\'' + prevId + '\')">← Anterior</button>'
+        : '<span></span>')
+    + '<span style="font-size:12px;color:#64748b;font-weight:600">' + (posActual + 1) + ' / ' + conDatos.length + '</span>'
+    + (nextId
+        ? '<button class="btn bo" onclick="closeM();verDetalleCandidato(\'' + nextId + '\')">Siguiente →</button>'
+        : '<span></span>')
+    + '</div>';
+
+  openM(
+    (idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : (posActual + 1) + '.') + ' ' + g.nombre,
+    tarjetaCandidato(g, puesto, tipo),
+    navHtml,
+    true
+  );
 }
 
 // ── GENERAR PDF ──────────────────────────────────────────

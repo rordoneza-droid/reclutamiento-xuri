@@ -752,7 +752,7 @@ function renderPaso(){
       html+='<div class="opciones">';
       (p.opts||[]).forEach(function(opt,i){
         var isSel=respuestas[p.id]===i;
-        html+='<button class="opcion'+(isSel?' sel':'')+'" onclick="selOp(\''+p.id+'\','+i+')">'
+        html+='<button id="op_'+p.id+'_'+i+'" class="opcion'+(isSel?' sel':'')+'" onclick="selOp(\''+p.id+'\','+i+')">'
           +'<div class="op-letra">'+letras[i]+'</div>'
           +'<div class="op-txt">'+opt+'</div>'
           +'</button>';

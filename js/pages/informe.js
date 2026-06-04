@@ -345,7 +345,7 @@ function verDetalleCandidato(candId) {
     + (prevId
         ? '<button class="btn bo" onclick="closeM();verDetalleCandidato(\'' + prevId + '\')">← Anterior</button>'
         : '<span></span>')
-    + '<span style="font-size:12px;color:#64748b;font-weight:600">' + (posActual + 1) + ' / ' + conDatos.length + '</span>'
+    + '<button class="btn bo" onclick="generarPDFCandidato(\'' + candId + '\')" style="gap:5px">🖨️ PDF individual</button>'
     + (nextId
         ? '<button class="btn bo" onclick="closeM();verDetalleCandidato(\'' + nextId + '\')">Siguiente →</button>'
         : '<span></span>')
@@ -357,6 +357,175 @@ function verDetalleCandidato(candId) {
     navHtml,
     true
   );
+}
+
+// ── PDF INDIVIDUAL POR CANDIDATO ─────────────────────────
+function generarPDFCandidato(candId) {
+  var conv = DB.convs().find(function(c) { return c.id === infC; });
+  if (!conv) { toast('Selecciona una convocatoria', 'err'); return; }
+
+  var cand = DB.cands().find(function(c) { return c.id === candId; });
+  if (!cand) return;
+
+  var g = _infScores.find(function(s) { return s.id === candId; });
+  if (!g) { g = calcScore(candId); g.nombre = cand.apellidos + ', ' + cand.nombres; g.ciudad = cand.ciudad || '-'; }
+
+  var cfg      = getCfg();
+  var empresa  = cfg.empresa || '[EMPRESA]';
+  var fecha    = new Date().toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric' });
+  var vacantes = conv.vacantes || 1;
+
+  // Posición en ranking
+  var conDatos = _infScores.filter(function(s) { return s.testsCount > 0; });
+  var pos      = conDatos.findIndex(function(s) { return s.id === candId; });
+  var tipo     = pos < vacantes ? 'ganador' : pos < vacantes * 2 ? 'suplente' : 'otro';
+  var medalTxt = pos === 0 ? '🥇 Puesto 1 — RECOMENDADO' : pos === 1 ? '🥈 Puesto 2' : pos === 2 ? '🥉 Puesto 3' : 'Puesto ' + (pos + 1);
+  var decColor = tipo === 'ganador' ? '#059669' : tipo === 'suplente' ? '#d97706' : '#64748b';
+
+  // Análisis
+  var dec  = decisionFinal(g);
+  var b5a  = analizarBig5(g.big5Dims, g.big5Score);
+  var scla = analizarSCL(g.sclScore, g.sclFlags);
+  var cga  = analizarCargo(g.cargoScore, g.cargoCorr, g.cargoTotal);
+
+  // Entrevista
+  var entHtml = '';
+  var candObj = DB.cands().find(function(c) { return c.id === candId; });
+  if (candObj && candObj.entrevistas && candObj.entrevistas.length) {
+    var lastEnt = candObj.entrevistas[candObj.entrevistas.length - 1];
+    var recMap  = { recomendar: '✅ Recomendar', reserva: '⚠️ Reserva', 'no recomendar': '❌ No recomendar' };
+    entHtml = '<tr><td style="background:#f8fafc;font-weight:700">Entrevista</td>'
+      + '<td>' + (lastEnt.notaSobre10 != null ? lastEnt.notaSobre10 + '/10 (' + lastEnt.puntaje + '%)' : lastEnt.puntaje + '%') + '</td>'
+      + '<td>' + (recMap[lastEnt.rec] || lastEnt.rec || '') + '</td>'
+      + '<td>' + lastEnt.fecha + '</td></tr>'
+      + (lastEnt.opinion ? '<tr><td colspan="4" style="background:#f0fdf4;padding:10px;font-size:11px;line-height:1.6">'
+        + '<strong>Opinión del entrevistador:</strong> ' + lastEnt.opinion + '</td></tr>' : '');
+  }
+
+  // Barras dimensión Big5
+  var dn = { E:'Extraversión', A:'Amabilidad', C:'Responsabilidad', N:'Est.Emocional', O:'Apertura' };
+  var b5rows = g.big5Dims ? Object.keys(dn).map(function(k) {
+    var v = g.big5Dims[k];
+    var c = v >= 75 ? '#059669' : v >= 50 ? '#d97706' : '#dc2626';
+    return '<div style="margin-bottom:5px">'
+      + '<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px">'
+      + '<span>' + dn[k] + '</span><strong style="color:' + c + '">' + v + '%</strong></div>'
+      + '<div style="height:4px;background:#e2e8f0;border-radius:2px">'
+      + '<div style="width:' + v + '%;height:100%;background:' + c + ';border-radius:2px"></div></div></div>';
+  }).join('') : '<span style="color:#94a3b8">Sin datos</span>';
+
+  var sclBadges = g.hasScl
+    ? (g.sclFlags.length
+        ? g.sclFlags.map(function(f) { return '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:10px;font-size:9px;margin:2px;display:inline-block">' + f + '</span>'; }).join('')
+        : '<span style="background:#d1fae5;color:#065f46;padding:2px 10px;border-radius:10px;font-size:10px">✓ Sin alertas</span>')
+    : '<span style="color:#94a3b8">Sin datos</span>';
+
+  function filaAnalisis(icono, label, an) {
+    if (!an) return '';
+    var nc = { alto:'#059669', medio:'#d97706', bajo:'#dc2626' }[an.nivel] || '#64748b';
+    var nl = { alto:'Favorable', medio:'Regular', bajo:'Desfavorable' }[an.nivel] || '';
+    return '<tr><td style="padding:8px 10px;font-weight:600;background:#f8fafc;width:22%">' + icono + ' ' + label + '</td>'
+      + '<td style="padding:8px 10px;color:' + nc + ';font-weight:700;width:18%">' + nl + '<br><small>' + (an.score != null ? an.score + '%' : '—') + '</small></td>'
+      + '<td style="padding:8px 10px;font-size:11px;color:#475569;line-height:1.5">' + an.texto
+      + (an.alerta ? '<div style="margin-top:5px;padding:5px 8px;background:#fff7ed;color:#c2410c;font-size:10px;border-radius:4px;font-weight:600">' + an.alerta + '</div>' : '')
+      + '</td></tr>';
+  }
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    + '<title>Informe — ' + g.nombre + '</title>'
+    + '<style>'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:Arial,sans-serif;font-size:12px;color:#1e293b}'
+    + '.page{width:21cm;min-height:29.7cm;margin:0 auto;padding:1.5cm 2cm}'
+    + '.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid ' + decColor + ';padding-bottom:12px;margin-bottom:18px}'
+    + '.sec{font-size:11px;font-weight:700;color:#2563eb;border-bottom:1px solid #bfdbfe;padding-bottom:4px;margin:16px 0 10px;text-transform:uppercase;letter-spacing:.05em}'
+    + 'table{width:100%;border-collapse:collapse;font-size:11px}'
+    + 'th{background:#f1f5f9;padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase;border-bottom:2px solid #e2e8f0;color:#475569}'
+    + 'td{padding:8px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle}'
+    + '.score-hero{background:' + dec.bg + ';border:2px solid ' + dec.color + ';border-radius:10px;padding:16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}'
+    + '.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}'
+    + '.box{background:#f8fafc;border-radius:8px;padding:12px}'
+    + '.box-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}'
+    + '.firmas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:30px;margin-top:40px}'
+    + '.firma-box{text-align:center}'
+    + '.firma-line{border-bottom:1px solid #334155;height:50px;margin-bottom:8px}'
+    + '.footer{margin-top:16px;font-size:9px;color:#94a3b8;text-align:center;border-top:1px solid #f1f5f9;padding-top:6px}'
+    + '@media print{body{padding:0}.page{margin:0;padding:1.2cm 1.8cm}}'
+    + '</style></head><body><div class="page">'
+
+    // HEADER
+    + '<div class="hdr">'
+    + '<div><div style="font-size:18px;font-weight:900;color:' + decColor + '">' + empresa + '</div>'
+    + '<div style="font-size:10px;color:#64748b;margin-top:2px">' + (cfg.ruc ? 'RUC: ' + cfg.ruc : '') + (cfg.ciudad ? ' · ' + cfg.ciudad : '') + '</div></div>'
+    + '<div style="text-align:right">'
+    + '<div style="font-size:13px;font-weight:700">INFORME INDIVIDUAL DE CANDIDATO</div>'
+    + '<div style="background:#eff6ff;color:#1e40af;padding:3px 12px;border-radius:4px;font-weight:700;font-size:11px;margin-top:5px">' + conv.titulo + '</div>'
+    + '<div style="font-size:10px;color:#64748b;margin-top:4px">' + fecha + '</div>'
+    + '</div></div>'
+
+    // DATOS CANDIDATO
+    + '<div class="sec">1. Datos del candidato</div>'
+    + '<table><tr><td style="background:#f8fafc;font-weight:700;width:35%">Nombre completo</td><td><strong>' + g.nombre + '</strong></td></tr>'
+    + '<tr><td style="background:#f8fafc;font-weight:700">Ciudad</td><td>' + g.ciudad + '</td></tr>'
+    + '<tr><td style="background:#f8fafc;font-weight:700">Posición en ranking</td><td><strong style="color:' + decColor + '">' + medalTxt + '</strong> de ' + conDatos.length + ' evaluados</td></tr>'
+    + '<tr><td style="background:#f8fafc;font-weight:700">Convocatoria</td><td>' + conv.titulo + '</td></tr>'
+    + '<tr><td style="background:#f8fafc;font-weight:700">Responsable RRHH</td><td>' + (cfg.dirRRHH || '______________________________') + '</td></tr>'
+    + '</table>'
+
+    // RESULTADO GLOBAL
+    + '<div class="sec">2. Resultado global</div>'
+    + '<div class="score-hero">'
+    + '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:' + dec.color + ';margin-bottom:4px">' + dec.icono + ' ' + dec.titulo + '</div>'
+    + '<p style="font-size:11px;color:#475569;line-height:1.5;max-width:420px">' + dec.texto + '</p></div>'
+    + '<div style="text-align:right;flex-shrink:0">'
+    + '<div style="font-size:52px;font-weight:900;color:' + dec.color + ';line-height:1">' + g.score + '%</div>'
+    + '<div style="font-size:10px;color:#64748b">Puntaje total</div></div></div>'
+
+    // SCORES POR TEST
+    + '<div class="grid2">'
+    + '<div class="box"><div class="box-title" style="color:#4f46e5">🧠 Personalidad Big Five</div>'
+    + (g.hasBig5 ? '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Puntaje global</span><strong style="color:' + (g.big5Score>=75?'#059669':g.big5Score>=50?'#d97706':'#dc2626') + '">' + g.big5Score + '%</strong></div>' + b5rows : '<span style="color:#94a3b8">Sin datos</span>')
+    + '</div>'
+    + '<div>'
+    + '<div class="box" style="margin-bottom:10px"><div class="box-title" style="color:#d97706">💭 Bienestar Psicológico (SCL)</div>'
+    + (g.hasScl
+        ? '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Puntaje SCL</span><strong style="color:' + (g.sclScore>=75?'#059669':g.sclScore>=50?'#d97706':'#dc2626') + '">' + g.sclScore + '%</strong></div>' + sclBadges
+        : '<span style="color:#94a3b8">Sin datos</span>')
+    + '</div>'
+    + '<div class="box"><div class="box-title" style="color:#059669">📚 Conocimientos del Cargo</div>'
+    + (g.hasCargo
+        ? '<div style="display:flex;justify-content:space-between"><span>Correctas</span><strong style="color:' + (g.cargoScore>=75?'#059669':g.cargoScore>=50?'#d97706':'#dc2626') + '">' + g.cargoScore + '%</strong></div>'
+          + (g.cargoCorr != null ? '<div style="font-size:10px;color:#64748b;margin-top:4px">' + g.cargoCorr + ' de ' + g.cargoTotal + ' preguntas</div>' : '')
+        : '<span style="color:#94a3b8">Sin datos</span>')
+    + '</div></div></div>'
+
+    // ANÁLISIS POR SECCIÓN
+    + '<div class="sec">3. Análisis por sección</div>'
+    + '<table><thead><tr><th>Evaluación</th><th>Resultado</th><th>Opinión del sistema</th></tr></thead><tbody>'
+    + filaAnalisis('🧠', 'Big Five', b5a)
+    + filaAnalisis('💭', 'SCL', scla)
+    + filaAnalisis('📚', 'Cargo', cga)
+    + '</tbody></table>'
+
+    // ENTREVISTA (si existe)
+    + (entHtml ? '<div class="sec">4. Entrevista</div><table><thead><tr><th>Tipo</th><th>Nota</th><th>Recomendación</th><th>Fecha</th></tr></thead><tbody>' + entHtml + '</tbody></table>' : '')
+
+    // FIRMAS
+    + '<div class="sec" style="margin-top:24px">' + (entHtml ? '5' : '4') + '. Firmas y conformidad</div>'
+    + '<div class="firmas">'
+    + '<div class="firma-box"><div class="firma-line"></div><div style="font-weight:700;font-size:11px">' + (cfg.dirRRHH || '______________________________') + '</div><div style="font-size:10px;color:#64748b">Director de RRHH</div></div>'
+    + '<div class="firma-box"><div class="firma-line"></div><div style="font-weight:700;font-size:11px">' + (cfg.repLegal || '______________________________') + '</div><div style="font-size:10px;color:#64748b">Representante Legal</div></div>'
+    + '<div class="firma-box"><div class="firma-line"></div><div style="font-weight:700;font-size:11px">______________________________</div><div style="font-size:10px;color:#64748b">Gerente / Aprobador</div></div>'
+    + '</div>'
+
+    + '<div class="footer">' + empresa + (cfg.ruc ? ' | RUC: ' + cfg.ruc : '') + ' | ' + g.nombre + ' | Generado: ' + fecha + ' | CONFIDENCIAL</div>'
+    + '</div>'
+    + '<script>window.onload=function(){window.print();}<\/script>'
+    + '</body></html>';
+
+  var win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
 }
 
 // ── GENERAR PDF ──────────────────────────────────────────

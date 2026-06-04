@@ -32,6 +32,7 @@ function pgEntrev(){
         +'<td>'+(tot!=null?'<span class="bdg '+sCls(tot)+'">'+tot+'%</span>':'-')+'</td>'
         +'<td><span class="bdg '+(EB[c.etapa]||'b-gr')+'">'+(EL[c.etapa]||c.etapa)+'</span></td>'
         +'<td><div class="flex g2">'
+        +(ents.length?'<button class="btn bo bxs" onclick="verEntrevista(\''+c.id+'\')">👁 Ver</button>':'')
         +'<button class="btn bp bxs" onclick="modalEntVirtual(\''+c.id+'\')">🎤 Entrevistar</button>'
         +'<button class="btn bo bxs" onclick="regresarEtapa(\''+c.id+'\')">← Regresar</button>'
         +'<button class="btn bw bxs" onclick="overrideD(\''+c.id+'\')">Dir.</button>'
@@ -242,6 +243,77 @@ function guardarEntVirt(){
   closeM();
   toast('Entrevista guardada — '+nota+'/10 ('+puntaje+'%)','ok');
   pgEntrev();
+}
+
+// ── VER ENTREVISTA GUARDADA ──────────────────────────────
+function verEntrevista(candId){
+  var c=DB.cands().find(function(x){return x.id===candId;});
+  if(!c||!c.entrevistas||!c.entrevistas.length){toast('Sin entrevistas guardadas','err');return;}
+
+  var recIcon={recomendar:'✅ Recomendar',reserva:'⚠️ Reserva','no recomendar':'❌ No recomendar'};
+  var recColor={recomendar:'#059669',reserva:'#d97706','no recomendar':'#dc2626'};
+
+  var html='';
+  // Muestra todas las entrevistas, la más reciente primero
+  c.entrevistas.slice().reverse().forEach(function(ent,idx){
+    var isVirtual=ent.tipo==='Virtual';
+    var scoreHtml=ent.notaSobre10!=null
+      ?'<span style="font-size:28px;font-weight:800;color:#1e293b">'+ent.notaSobre10+'</span>'
+       +'<span style="font-size:16px;color:#64748b;font-weight:600"> / 10</span>'
+       +'<span style="font-size:13px;color:#94a3b8;margin-left:8px">('+ent.puntaje+'%)</span>'
+      :'<span style="font-size:22px;font-weight:800;color:#1e293b">'+ent.puntaje+'%</span>';
+
+    html+='<div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:18px">';
+
+    // Cabecera de la entrevista
+    html+='<div style="background:#f8fafc;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
+      +'<div>'
+      +'<div style="font-size:13px;font-weight:800;color:#1e293b">'+(isVirtual?'🎤 Entrevista Virtual':'📋 '+ent.tipo)+'</div>'
+      +'<div style="font-size:12px;color:#64748b;margin-top:2px">'+ent.fecha+(ent.entrevistador?' · '+ent.entrevistador:'')+'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">'
+      +'<div>'+scoreHtml+'</div>'
+      +'<div style="font-size:13px;font-weight:700;color:'+(recColor[ent.rec]||'#64748b')+'">'+(recIcon[ent.rec]||ent.rec||'')+'</div>'
+      +'</div></div>';
+
+    // Opinión personal (si existe)
+    if(ent.opinion){
+      html+='<div style="padding:14px 18px;border-bottom:1px solid #f1f5f9">'
+        +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:6px">Opinión Personal</div>'
+        +'<div style="font-size:14px;line-height:1.65;color:#334155;white-space:pre-wrap">'+ent.opinion+'</div>'
+        +'</div>';
+    }
+
+    // Preguntas con notas (solo las que tienen nota)
+    if(isVirtual&&ent.preguntas&&ent.preguntas.length){
+      var conNota=ent.preguntas.filter(function(p){return p.nota&&p.nota.trim();});
+      if(conNota.length){
+        html+='<div style="padding:14px 18px">'
+          +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:10px">'
+          +'Observaciones por pregunta ('+conNota.length+' de '+ent.preguntas.length+')</div>';
+        conNota.forEach(function(p){
+          var cat=_catMeta[p.cat]||{color:'#64748b',bg:'#f1f5f9'};
+          html+='<div style="margin-bottom:12px;padding:12px 14px;background:#f8fafc;border-radius:8px;border-left:3px solid '+cat.color+'">'
+            +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+            +'<span style="padding:2px 8px;border-radius:10px;background:'+cat.bg+';color:'+cat.color+';font-size:10px;font-weight:800;text-transform:uppercase">'+p.cat+'</span>'
+            +'</div>'
+            +'<div style="font-size:13px;font-weight:600;color:#334155;margin-bottom:5px">'+p.txt+'</div>'
+            +'<div style="font-size:13px;color:#475569;line-height:1.55;white-space:pre-wrap">'+p.nota+'</div>'
+            +'</div>';
+        });
+        html+='</div>';
+      }else{
+        html+='<div style="padding:12px 18px;font-size:13px;color:#94a3b8">Sin observaciones registradas por pregunta.</div>';
+      }
+    }
+
+    html+='</div>'; // cierre card entrevista
+  });
+
+  openM('👁 Entrevistas — '+c.apellidos+', '+c.nombres, html,
+    '<button class="btn bo" onclick="closeM()">Cerrar</button>'
+    +'<button class="btn bp" onclick="closeM();modalEntVirtual(\''+candId+'\')">🎤 Nueva entrevista</button>',
+    true);
 }
 
 // ── DEFINIR FINALISTAS ───────────────────────────────────
